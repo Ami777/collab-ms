@@ -218,7 +218,7 @@ if (collab.isCEO()){
  const ceo = new collab.Manager(function (worker, data) {
  console.log('Message', data, 'from', worker.name);
  });
- const workerExample&nbsp; = ceo.newWorker('workerExample');
+ const workerExample  = ceo.newWorker('workerExample');
  workerExample.send('Hi worker!');
 } else {
  //Worker code
@@ -247,7 +247,7 @@ We will also use WorkerInfo.sendWithPromise() method instead of the WorkerInfo.s
 ```es6
  //CEO code
  const ceo = new collab.Manager();
- const workerExample&nbsp; = ceo.newWorker('workerExample');
+ const workerExample  = ceo.newWorker('workerExample');
  workerExample.sendWithPromise({a: 2\. b: 3}).then(function(result){
  console.log('Result of 2+3 from Worker is', result);
  }).catch(function(err){
@@ -283,13 +283,13 @@ const collab = require('./collab.js');
 switch(collab.getMyRole()){
  case '': //CEO
  const ceo = new collab.Manager();
- const midLevelManager&nbsp; = ceo.newWorker('midLevelManager');
+ const midLevelManager  = ceo.newWorker('midLevelManager');
 
         break;
     case 'midLevelManager': //Mid-level Manager
         const midWorker = new collab.Worker();
         const manager = new collab.Manager();
-        const newWorker&nbsp; = ceo.newWorker('worker');
+        const newWorker  = ceo.newWorker('worker');
 
         break;
     case 'worker': //Worker
@@ -308,7 +308,7 @@ const collab = require('./collab.js');
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelManager&nbsp; = ceo.newWorker('midLevelManager');
+        const midLevelManager  = ceo.newWorker('midLevelManager');
         midLevelManager.sendWithPromise('Hi.').then(function(data){
             console.log('< Answer', data, 'from mid-level Manager');
         });
@@ -319,12 +319,12 @@ switch(collab.getMyRole()){
            resolve(data);
        });
        const manager = new collab.Manager();
-       const newWorker&nbsp; = manager.newWorker('worker');
+       const newWorker  = manager.newWorker('worker');
        newWorker.sendWithPromise('Yo!').then(function(data){
            console.log('< Answer', data, 'from Worker');
        });
 
-   &nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
     case 'worker': //Worker
         const worker = new collab.Worker(null, function(data, resolve, reject){
             console.log('> Message', data, 'from mid-level Manager');
@@ -351,14 +351,14 @@ const collab = require('./collab.js');
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelManager&nbsp; = ceo.newWorker('midLevelManager');
+        const midLevelManager  = ceo.newWorker('midLevelManager');
         midLevelManager.sendWithPromise('Tell Worker to come to my office.').then(function(data){
             console.log('< Answer', data, 'from Worker');
         });
         break;
     case 'midLevelManager': //Mid-level Manager
         const manager = new collab.Manager();
-        const newWorker&nbsp; = manager.newWorker('worker');
+        const newWorker  = manager.newWorker('worker');
 
         const midWorker = new collab.Worker(null, function(data, resolve, reject){
             if (data.indexOf('Worker') > -1){
@@ -410,20 +410,20 @@ const collab = require('./collab.js');
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
+        const midLevelBalancer  = ceo.newWorker('balancer');
 
-   &nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
     case 'balancer': //Balancer Manager
-   &nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer();
-   &nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker();
-   &nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
-   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
+        const manager = new collab.Balancer();
+        const midWorker = new collab.Worker();
+        for ( let i = 0\. i &lt; 3\. i++ )
+            manager.newBalancedWorker('worker', 2);
 
-   &nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
     case 'worker': //Worker
-   &nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker();
+        const worker = new collab.Worker();
 
-   &nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
 }
 ```
 
@@ -431,42 +431,42 @@ Take a look. To add Worker in Balancer we use special method Balancer.newBalance
 
 CEO and Balancer parts looks now like this:
 ```es6
-&nbsp;&nbsp;&nbsp; case '': //CEO
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const ceo = new collab.Manager();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; midLevelBalancer.send('add10jobs');
+    case '': //CEO
+        const ceo = new collab.Manager();
+        const midLevelBalancer  = ceo.newWorker('balancer');
+        midLevelBalancer.send('add10jobs');
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'balancer': //Balancer Manager
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker(function(data){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (data == 'add10jobs'){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 10\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.addJob();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
+        break;
+    case 'balancer': //Balancer Manager
+        const manager = new collab.Balancer();
+        const midWorker = new collab.Worker(function(data){
+            if (data == 'add10jobs'){
+                for ( let i = 0\. i &lt; 10\. i++ )
+                    manager.addJob();
+            }
+        });
+        for ( let i = 0\. i &lt; 3\. i++ )
+            manager.newBalancedWorker('worker', 2);
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
 ```
 
 Now, we will add some test code to Worker:
 ```es6
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker(function(){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setTimeout(function(){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; worker.sendWorkDone('Done!');
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }, 2000);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+        const worker = new collab.Worker(function(){
+            setTimeout(function(){
+                worker.sendWorkDone('Done!');
+            }, 2000);
+        });
 ```
 
 Can you see the Worker.sendWorkDone() method? It is used to inform Balanced that one job is finished.
 
 And code to receive this message in Balancer, we will modify Balancer's constructor:
 ```es6
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer(function(worker, data){
+        const manager = new collab.Balancer(function(worker, data){
 console.log('Message ',data, 'from', worker.name);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+        });
 ```
 
 Ready code looks like this:
@@ -474,49 +474,49 @@ Ready code looks like this:
 const collab = require('./collab.js');
 
 switch(collab.getMyRole()){
-&nbsp;&nbsp;&nbsp; case '': //CEO
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const ceo = new collab.Manager();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; midLevelBalancer.send('add10jobs');
+    case '': //CEO
+        const ceo = new collab.Manager();
+        const midLevelBalancer  = ceo.newWorker('balancer');
+        midLevelBalancer.send('add10jobs');
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'balancer': //Balancer Manager
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer(function(worker, data){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; console.log('Message ',data, 'from', worker.name);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker(function(data){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (data == 'add10jobs'){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 10\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.addJob();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
+        break;
+    case 'balancer': //Balancer Manager
+        const manager = new collab.Balancer(function(worker, data){
+            console.log('Message ',data, 'from', worker.name);
+        });
+        const midWorker = new collab.Worker(function(data){
+            if (data == 'add10jobs'){
+                for ( let i = 0\. i &lt; 10\. i++ )
+                    manager.addJob();
+            }
+        });
+        for ( let i = 0\. i &lt; 3\. i++ )
+            manager.newBalancedWorker('worker', 2);
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'worker': //Worker
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker(function(){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setTimeout(function(){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; worker.sendWorkDone('Done!');
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }, 2000);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+        break;
+    case 'worker': //Worker
+        const worker = new collab.Worker(function(){
+            setTimeout(function(){
+                worker.sendWorkDone('Done!');
+            }, 2000);
+        });
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
 }
 ```
 
 And the result after about 4 seconds is:
 
-Message&nbsp; Done! from WORKER #2
-Message&nbsp; Done! from WORKER #1
-Message&nbsp; Done! from WORKER #2
-Message&nbsp; Done! from WORKER #1
-Message&nbsp; Done! from WORKER #3
-Message&nbsp; Done! from WORKER #3
-Message&nbsp; Done! from WORKER #2
-Message&nbsp; Done! from WORKER #1
-Message&nbsp; Done! from WORKER #2
-Message&nbsp; Done! from WORKER #1
+Message  Done! from WORKER #2
+Message  Done! from WORKER #1
+Message  Done! from WORKER #2
+Message  Done! from WORKER #1
+Message  Done! from WORKER #3
+Message  Done! from WORKER #3
+Message  Done! from WORKER #2
+Message  Done! from WORKER #1
+Message  Done! from WORKER #2
+Message  Done! from WORKER #1
 
 This is what Balancer is doing after adding or finishing the job:
 
@@ -531,36 +531,36 @@ Let's change this code to use Promises, it will be a little bit more complex and
 const collab = require('./collab.js');
 
 switch(collab.getMyRole()){
-&nbsp;&nbsp;&nbsp; case '': //CEO
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const ceo = new collab.Manager();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; midLevelBalancer.sendWithPromise('add10jobs').then(function(data){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; console.log('Balancer told CEO that all jobs are done!', data);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+    case '': //CEO
+        const ceo = new collab.Manager();
+        const midLevelBalancer  = ceo.newWorker('balancer');
+        midLevelBalancer.sendWithPromise('add10jobs').then(function(data){
+            console.log('Balancer told CEO that all jobs are done!', data);
+        });
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'balancer': //Balancer Manager
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker(null, function(data, resolve, reject){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (data == 'add10jobs'){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; let promises = [];
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 10\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; promises.push(manager.addJobWithPromise());
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Promise.all(promises).then(resolve).catch(reject);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
+        break;
+    case 'balancer': //Balancer Manager
+        const manager = new collab.Balancer();
+        const midWorker = new collab.Worker(null, function(data, resolve, reject){
+            if (data == 'add10jobs'){
+                let promises = [];
+                for ( let i = 0\. i &lt; 10\. i++ )
+                    promises.push(manager.addJobWithPromise());
+                Promise.all(promises).then(resolve).catch(reject);
+            }
+        });
+        for ( let i = 0\. i &lt; 3\. i++ )
+            manager.newBalancedWorker('worker', 2);
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'worker': //Worker
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker(null, function(data, resolve, reject){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setTimeout(function(){
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; resolve('Done!', true);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }, 2000);
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+        break;
+    case 'worker': //Worker
+        const worker = new collab.Worker(null, function(data, resolve, reject){
+            setTimeout(function(){
+                resolve('Done!', true);
+            }, 2000);
+        });
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
+        break;
 }
 ```
 
@@ -568,7 +568,7 @@ There is one new thing here. Look, when Worker is done it is passing true as a s
 
 The result after about 4 seconds is:
 
-Balancer told CEO that all jobs are done! [ 'Done!',&nbsp; 'Done!',&nbsp; 'Done!',&nbsp; 'Done!',&nbsp; 'Done!',&nbsp; 'Done!',&nbsp; 'Done!',&nbsp; 'Done!', 'Done!',&nbsp; 'Done!' ]
+Balancer told CEO that all jobs are done! [ 'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!', 'Done!',  'Done!' ]
 
 Now we have all: Promises, balancing, queue, tree structure. In just a few lines of code.
 
