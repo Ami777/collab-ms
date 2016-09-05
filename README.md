@@ -1,4 +1,4 @@
-# CollabMs - simple micro-services for Node
+# collab-ms - simple micro-services for Node
 
 Simple, yet complete micro-services library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues.
 
@@ -25,7 +25,7 @@ The name in shortcut for "collaboration". In this library we think about micro-s
 
 ## Basic concepts
 
-The communication is done in Manager-Worker manner. When you run your process you usually want to spawn main Manager - we call it CEO Manager. This Manager may spawn another Workers and Managers. This is done automatically by forking your main process. It's up to you to decide how to use Collab - we do not force you to anything. Here we will cover some basic about communication and our proposition of use.
+The communication is done in Manager-Worker manner. When you run your process you usually want to spawn main Manager - we call it CEO Manager. This Manager may spawn another Workers and Managers. This is done automatically by forking your main process. It's up to you to decide how to use collab-ms - we do not force you to anything. Here we will cover some basic about communication and our proposition of use.
 
 ### Terminology:
 
@@ -43,13 +43,13 @@ The communication is done in Manager-Worker manner. When you run your process yo
 
 *   **Work-done non-Promised message** - special case. Mix of normal non-Promised message with Balancer. Worker can inform Balancer it's work is done with it.
 
-*   **Work-done Promised message* *- special case. Mix of normal Promised message with Balancer. Worker can inform Balancer it's work is done with it.
+*   **Work-done Promised message** - special case. Mix of normal Promised message with Balancer. Worker can inform Balancer it's work is done with it.
 
 ## Getting started and tutorials
 
 First, Manager and structure. Then Worker. Then communication. Then some fun.
 
-First, let's create new project with index.js file. Then install Collab from npm:
+First, let's create new project with index.js file. Then install collab-ms from npm:
 
 @TODO!
 
@@ -139,6 +139,7 @@ Worker is spawned.
 Node won't finish by itself, click Ctrl+C to kill CEO with all of the spawned processes (Worker in our case). Remove console.log() lines.
 
 Now it's time to add communication. We will try something simple - normal non-Promised messages. We need to modify our code to pass callback function for massages in Manager as first argument in constructor. Callback will receive 3 arguments, but we only need 2 right now. Add this callback:
+```es6
 ```es6
 function (worker, data) {
 
@@ -403,31 +404,33 @@ First we will use simple communication (work-done non-Promised messages). CEO wi
 Then we will use Promises for all the communication. The flow is almost the same, CEO will also tell Balancer to add jobs but CEO will get an answer from Balancer when all the jobs are done. We will need Bluebird library for this!
 
 First, let's build our structure:
+```es6
 const collab = require('./collab.js');
 
 switch(collab.getMyRole()){
-&nbsp;&nbsp;&nbsp; case '': //CEO
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const ceo = new collab.Manager();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
+    case '': //CEO
+        const ceo = new collab.Manager();
+        const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'balancer': //Balancer Manager
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker();
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
+   &nbsp;&nbsp;&nbsp;&nbsp; break;
+    case 'balancer': //Balancer Manager
+   &nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer();
+   &nbsp;&nbsp;&nbsp;&nbsp; const midWorker = new collab.Worker();
+   &nbsp;&nbsp;&nbsp;&nbsp; for ( let i = 0\. i &lt; 3\. i++ )
+   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
-&nbsp;&nbsp;&nbsp; case 'worker': //Worker
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker();
+   &nbsp;&nbsp;&nbsp;&nbsp; break;
+    case 'worker': //Worker
+   &nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker();
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
+   &nbsp;&nbsp;&nbsp;&nbsp; break;
 }
+```
 
 Take a look. To add Worker in Balancer we use special method Balancer.newBalancedWorker(). Second argument is maximum number of jobs that this Worker can do at the same time. Now, let CEO tell Balancer to add the jobs and let's do it.
 
 CEO and Balancer parts looks now like this:
-
+```es6
 &nbsp;&nbsp;&nbsp; case '': //CEO
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const ceo = new collab.Manager();
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const midLevelBalancer&nbsp; = ceo.newWorker('balancer');
@@ -446,25 +449,28 @@ CEO and Balancer parts looks now like this:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; manager.newBalancedWorker('worker', 2);
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
+```
 
 Now, we will add some test code to Worker:
-
+```es6
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const worker = new collab.Worker(function(){
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setTimeout(function(){
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; worker.sendWorkDone('Done!');
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }, 2000);
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+```
 
 Can you see the Worker.sendWorkDone() method? It is used to inform Balanced that one job is finished.
 
 And code to receive this message in Balancer, we will modify Balancer's constructor:
-
+```es6
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const manager = new collab.Balancer(function(worker, data){
 console.log('Message ',data, 'from', worker.name);
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });
+```
 
 Ready code looks like this:
-
+```es6
 const collab = require('./collab.js');
 
 switch(collab.getMyRole()){
@@ -497,6 +503,7 @@ switch(collab.getMyRole()){
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
 }
+```
 
 And the result after about 4 seconds is:
 
@@ -520,7 +527,7 @@ This is what Balancer is doing after adding or finishing the job:
 4.  Job is then assigned to this Worker.
 
 Let's change this code to use Promises, it will be a little bit more complex and will use Promise.all():
-
+```es6
 const collab = require('./collab.js');
 
 switch(collab.getMyRole()){
@@ -555,6 +562,7 @@ switch(collab.getMyRole()){
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; break;
 }
+```
 
 There is one new thing here. Look, when Worker is done it is passing true as a second argument to resolve function. This is very important in our code, because it will tell Manager it should treat answer as work-done Promised message.
 
