@@ -4,7 +4,7 @@ Simple, yet complete micro-services library for Node. Zero dependencies, high-qu
 
 ## The idea
 
-I created this library to be able to create complex tree-like-structure micro-services architecture in my Node apps. The idea was to create simple, yet complete solution with good quality typed code (TypeScript &amp; ES6\. however you can use this library in pure JS without any additional steps). ZERO external dependencies.
+I created this library to be able to create complex tree-like-structure micro-services architecture in my Node apps. The idea was to create simple, yet complete solution with good quality typed code (TypeScript & ES6\. however you can use this library in pure JS without any additional steps). ZERO external dependencies.
 
 The name in shortcut for "collaboration". In this library we think about micro-services structure as about company. In fact, few concepts are based on management theory. We think about each level as about collaborators: Managers and Workers. Typically, first level is called CEO and is Manager. Each mid-level is both Manager and Worker. Last level is usually Worker.
 
@@ -20,7 +20,6 @@ The name in shortcut for "collaboration". In this library we think about micro-s
 *   Send Promised messages and wait for answer/error
 *   Add auto balancing and queues
 *   Combine normal messages, Promised messages and auto balancing how you need to
-
 *   Spawn new forks of process, communicate via built-in ICS (well, you don't need to go into details, this is transparent for you)
 
 ## Basic concepts
@@ -139,7 +138,6 @@ Worker is spawned.
 Node won't finish by itself, click Ctrl+C to kill CEO with all of the spawned processes (Worker in our case). Remove console.log() lines.
 
 Now it's time to add communication. We will try something simple - normal non-Promised messages. We need to modify our code to pass callback function for massages in Manager as first argument in constructor. Callback will receive 3 arguments, but we only need 2 right now. Add this callback:
-```es6
 ```es6
 function (worker, data) {
 
@@ -270,7 +268,7 @@ Run the code, you should see this:
 Result of 2+3 from Worker is 5
 ```
 
-Promises in Collab are easy and good-looking, aren't they?
+Promises in collab-ms are easy and good-looking, aren't they?
 
 ### Complex structure communication
 
@@ -416,7 +414,7 @@ switch(collab.getMyRole()){
     case 'balancer': //Balancer Manager
         const manager = new collab.Balancer();
         const midWorker = new collab.Worker();
-        for ( let i = 0\. i &lt; 3\. i++ )
+        for ( let i = 0\. i < 3\. i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -441,11 +439,11 @@ CEO and Balancer parts looks now like this:
         const manager = new collab.Balancer();
         const midWorker = new collab.Worker(function(data){
             if (data == 'add10jobs'){
-                for ( let i = 0\. i &lt; 10\. i++ )
+                for ( let i = 0\. i < 10\. i++ )
                     manager.addJob();
             }
         });
-        for ( let i = 0\. i &lt; 3\. i++ )
+        for ( let i = 0\. i < 3\. i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -486,11 +484,11 @@ switch(collab.getMyRole()){
         });
         const midWorker = new collab.Worker(function(data){
             if (data == 'add10jobs'){
-                for ( let i = 0\. i &lt; 10\. i++ )
+                for ( let i = 0\. i < 10\. i++ )
                     manager.addJob();
             }
         });
-        for ( let i = 0\. i &lt; 3\. i++ )
+        for ( let i = 0\. i < 3\. i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -506,7 +504,7 @@ switch(collab.getMyRole()){
 ```
 
 And the result after about 4 seconds is:
-
+```console
 Message  Done! from WORKER #2
 Message  Done! from WORKER #1
 Message  Done! from WORKER #2
@@ -517,11 +515,11 @@ Message  Done! from WORKER #2
 Message  Done! from WORKER #1
 Message  Done! from WORKER #2
 Message  Done! from WORKER #1
+```
 
 This is what Balancer is doing after adding or finishing the job:
 
-1.  When new job is added it checks if there is any free (number of current jobs &lt; max. jobs) Worker
-
+1.  When new job is added it checks if there is any free (number of current jobs < max. jobs) Worker
 2.  If there is no free room, new job is added to queue
 3.  When there is any free Worker, Balancer will look for the Worker with smallest number of current jobs
 4.  Job is then assigned to this Worker.
@@ -544,12 +542,12 @@ switch(collab.getMyRole()){
         const midWorker = new collab.Worker(null, function(data, resolve, reject){
             if (data == 'add10jobs'){
                 let promises = [];
-                for ( let i = 0\. i &lt; 10\. i++ )
+                for ( let i = 0\. i < 10\. i++ )
                     promises.push(manager.addJobWithPromise());
                 Promise.all(promises).then(resolve).catch(reject);
             }
         });
-        for ( let i = 0\. i &lt; 3\. i++ )
+        for ( let i = 0\. i < 3\. i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -567,8 +565,9 @@ switch(collab.getMyRole()){
 There is one new thing here. Look, when Worker is done it is passing true as a second argument to resolve function. This is very important in our code, because it will tell Manager it should treat answer as work-done Promised message.
 
 The result after about 4 seconds is:
-
+```console
 Balancer told CEO that all jobs are done! [ 'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!',  'Done!', 'Done!',  'Done!' ]
+```
 
 Now we have all: Promises, balancing, queue, tree structure. In just a few lines of code.
 
