@@ -4,7 +4,7 @@ Simple, yet complete micro-services library for Node. Zero dependencies, high-qu
 
 ## The idea
 
-I created this library to be able to create complex tree-like-structure micro-services architecture in my Node apps. The idea was to create simple, yet complete solution with good quality typed code (TypeScript & ES6\. however you can use this library in pure JS without any additional steps). ZERO external dependencies.
+I created this library to be able to create complex tree-like-structure micro-services architecture in my Node apps. The idea was to create simple, yet complete solution with good quality typed code (TypeScript & ES6, however you can use this library in pure JS without any additional steps). ZERO external dependencies.
 
 The name in shortcut for "collaboration". In this library we think about micro-services structure as about company. In fact, few concepts are based on management theory. We think about each level as about collaborators: Managers and Workers. Typically, first level is called CEO and is Manager. Each mid-level is both Manager and Worker. Last level is usually Worker.
 
@@ -246,7 +246,7 @@ We will also use WorkerInfo.sendWithPromise() method instead of the WorkerInfo.s
  //CEO code
  const ceo = new collab.Manager();
  const workerExample  = ceo.newWorker('workerExample');
- workerExample.sendWithPromise({a: 2\. b: 3}).then(function(result){
+ workerExample.sendWithPromise({a: 2, b: 3}).then(function(result){
  console.log('Result of 2+3 from Worker is', result);
  }).catch(function(err){
  console.log('Error in Worker', err);
@@ -395,7 +395,7 @@ This is the last tutorial example. Here we will use special Balancer subtype of 
 
 [@TODO OBRAZEK]
 
-We will tell Balancer to let each of 3 Workers to make 2 jobs at once. Each Worker will finish it's job after 2 seconds. Then, CEO will tell Balancer to give Workers 1\. jobs.
+We will tell Balancer to let each of 3 Workers to make 2 jobs at once. Each Worker will finish it's job after 2 seconds. Then, CEO will tell Balancer to give Workers 10 jobs.
 
 First we will use simple communication (work-done non-Promised messages). CEO will tell Balancer to add jobs. Balancer will give jobs to Workers. When Worker is done it will send result to Balancer and it will output it.
 
@@ -414,7 +414,7 @@ switch(collab.getMyRole()){
     case 'balancer': //Balancer Manager
         const manager = new collab.Balancer();
         const midWorker = new collab.Worker();
-        for ( let i = 0\. i < 3\. i++ )
+        for ( let i = 0; i < 3; i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -439,11 +439,11 @@ CEO and Balancer parts looks now like this:
         const manager = new collab.Balancer();
         const midWorker = new collab.Worker(function(data){
             if (data == 'add10jobs'){
-                for ( let i = 0\. i < 10\. i++ )
+                for ( let i = 0; i < 10; i++ )
                     manager.addJob();
             }
         });
-        for ( let i = 0\. i < 3\. i++ )
+        for ( let i = 0; i < 3; i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -484,11 +484,11 @@ switch(collab.getMyRole()){
         });
         const midWorker = new collab.Worker(function(data){
             if (data == 'add10jobs'){
-                for ( let i = 0\. i < 10\. i++ )
+                for ( let i = 0; i < 10; i++ )
                     manager.addJob();
             }
         });
-        for ( let i = 0\. i < 3\. i++ )
+        for ( let i = 0; i < 3; i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -542,12 +542,12 @@ switch(collab.getMyRole()){
         const midWorker = new collab.Worker(null, function(data, resolve, reject){
             if (data == 'add10jobs'){
                 let promises = [];
-                for ( let i = 0\. i < 10\. i++ )
+                for ( let i = 0; i < 10; i++ )
                     promises.push(manager.addJobWithPromise());
                 Promise.all(promises).then(resolve).catch(reject);
             }
         });
-        for ( let i = 0\. i < 3\. i++ )
+        for ( let i = 0; i < 3; i++ )
             manager.newBalancedWorker('worker', 2);
 
         break;
@@ -571,12 +571,470 @@ Balancer told CEO that all jobs are done! [ 'Done!',  'Done!',  'Done!',  'Done!
 
 Now we have all: Promises, balancing, queue, tree structure. In just a few lines of code.
 
-[@TODO docs:]
+## Reference / documentation
+This is typing file for collab-ms, it is also used as a reference/documentation. If you use collab-ms with TypeScript you have this docs in your IDE, too.
+```typescript
+import { ChildProcess } from "child_process";
+declare module Collab {
+    interface NormalSendFunction {
+        /**
+         * @param data Any data you want to pass.
+         */
+        (data?: any): void;
+    }
+    interface ResolveFunction {
+        /**
+         * @param data Any data you want to pass.
+         */
+        (data?: any): void;
+    }
+    interface ResolveBalancedFunction {
+        /**
+         * @param data Any data you want to pass.
+         * @param sendWorkDone False (default) means this will be sent as normal Promise answer. Set to True to send as work-done Promise answer.
+         */
+        (data?: any, sendWorkDone?: boolean): void;
+    }
+    interface RejectFunction {
+        /**
+         * @param error Error information to send.
+         */
+        (error?: any): void;
+    }
+    interface RejectBalancedFunction {
+        /**
+         * @param error Error information to send.
+         * @param sendWorkDone False (default) means this will be sent as normal Promise answer. Set to True to send as work-done Promise answer.
+         */
+        (error?: any, sendWorkDone?: boolean): void;
+    }
+    interface WorkerMsgClbFunction {
+        /**
+         * @param worker Current Worker info object.
+         * @param data Data passed from Worker.
+         * @param send This is shortcut to worker.send() function for quick answers.
+         */
+        (worker?: WorkerInfo, data?: any, send?: NormalSendFunction): void;
+    }
+    interface ManagerMsgClbFunction {
+        /**
+         * @param data Data passed from Manager.
+         * @param send This is shortcut to Worker.send() function for quick answers.
+         */
+        (data?: any, send?: NormalSendFunction, sendWorkDone?: NormalSendFunction): void;
+    }
+    interface ManagerPromisedMsgClbFunction {
+        /**
+         * @param data Data passed from Manager.
+         */
+        (data?: any, resolve?: ResolveBalancedFunction, reject?: RejectBalancedFunction): void;
+    }
+    /**
+     * Information about Worker.
+     */
+    interface WorkerInfo {
+        /**
+         * Name given automatically.
+         */
+        name?: string;
+        /**
+         * Type name given by you.
+         */
+        type?: string;
+        /**
+         * Options passed by you when forking.
+         */
+        options?: any;
+        /**
+         * Internal ChildProcess.
+         */
+        process?: ChildProcess;
+        /**
+         * Your internal data.
+         */
+        data?: any;
+        /**
+         * Function to send non-Promised message.
+         */
+        send?: NormalSendFunction;
+        /**
+         * Function to send Promised message.
+         */
+        sendWithPromise?: NormalSendFunction;
+    }
+    /**
+     * This is internal structure used for Promises.
+     */
+    interface Promises {
+        id: number;
+        resolve?: ResolveFunction;
+        reject?: RejectFunction;
+    }
+    class Manager {
+        protected onWorkerMessage: WorkerMsgClbFunction;
+        protected promiseIdx: number;
+        protected promises: Promises[];
+        protected workers: WorkerInfo[];
+        /**
+         * Class constructor for Manager - CEO and mid-level managers.
+         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
+         */
+        constructor(onWorkerMessage?: WorkerMsgClbFunction);
+        protected onMessage(worker: WorkerInfo, data: any): void;
+        /**
+         * Adds new Worker using child_process.fork() and links it with this Manager. This will return WorkerInfo instance with the possibilities to send messages and with unique name field.
+         * @param type String with name of type of Worker (for example 'worker' or 'readNode'). MUST BE ONE WORD, ONLY LETTERS.
+         * @param moduleOrFile Module or file to run (to be used as first parameter in child_process.fork()).
+         * @param options Options to pass to the Worker - may be anything.
+         * @param data Data about this Worker to store in this Manager. May by anything.
+         * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
+         */
+        newWorker(type: string, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        /**
+         * Find WorkerInfo by Worker name.
+         * @param name Name of Worker.
+         */
+        getWorker(name: string): WorkerInfo;
+        /**
+         * Find array of WorkerInfo by Worker type.
+         * @param type Type of Worker.
+         */
+        getWorkers(type: string): WorkerInfo[];
+        private _buildFuncSendWithPromise(process);
+    }
+    class Balancer extends Manager {
+        private queue;
+        /**
+         * Class constructor for Balancer Manager - mostly it will be special mid-level manager.
+         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
+         */
+        constructor(onWorkerMessage?: WorkerMsgClbFunction);
+        private onQueueCheckInterval();
+        private findMostFreeWorker();
+        /**
+         * Adds new Worker using child_process.fork() and links it with this Manager. This is special type of Worker which will be managed and balanced by this Balancer. For more information refer to Manager.newWorker() docs.
+         * @param type String with name of type of Worker (for example 'worker' or 'readNode'). MUST BE ONE WORD, ONLY LETTERS.
+         * @param moduleOrFile Module or file to run (to be used as first parameter in child_process.fork()).
+         * @param maxJobsAtOnce Maximum number of jobs that this Worker should do at once.
+         * @param options Options to pass to the Worker - may be anything.
+         * @param data Data about this Worker to store in this Manager. May by anything.
+         * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
+         */
+        newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        /**
+         * Adds job to do by some of the best-suited Worker. Best-suited Worker is the one with the smallest amount of current jobs and with free space for next one. If no Worker can be found the job is queued and when any of the Workers will be free this job will be executed.
+         * @param data Any data you want to pass to the Worker.
+         */
+        addJob(data?: any): void;
+        /**
+         * Same as Balancer.addJob() but with Promises.
+         * @param data Any data you want to pass to the Worker.
+         */
+        addJobWithPromise(data?: any): Promise<any>;
+        protected onMessage(worker: WorkerInfo, data: any): void;
+    }
+    class Worker {
+        onManagerMessage: ManagerMsgClbFunction;
+        onManagerMessageWithPromise: ManagerPromisedMsgClbFunction;
+        private type;
+        private name;
+        private options;
+        /**
+         * Class constructor for Worker - it will be any worker including mid-level manager.
+         * @param onManagerMessage Callback which will run when non-Promised message arrives to Worker from Manager.
+         * @param onManagerMessageWithPromise Callback which will run when Promised message arrives to Worker from Manager.
+         */
+        constructor(onManagerMessage?: ManagerMsgClbFunction, onManagerMessageWithPromise?: ManagerPromisedMsgClbFunction);
+        /**
+         * Reads type name of Worker passed by Manager to this Worker while forking it.
+         */
+        getType(): string;
+        /**
+         * Reads options passed by Manager to this Worker while forking it.
+         */
+        getOptions(): any;
+        /**
+         * Reads name of Worker passed by Manager to this Worker while forking it.
+         */
+        getName(): string;
+        private onMessage(data);
+        private _makeResolveFunc(promiseId);
+        private _makeRejectFunc(promiseId);
+        /**
+         * Sends normal, non-Promised message to closest Manager.
+         * @param data Any data you want to pass to the Manager.
+         */
+        send(data?: any): void;
+        /**
+         * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
+         * @param data Any data you want to pass to the Manager.
+         */
+        sendWorkDone(data?: any): void;
+    }
+    /**
+     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
+     */
+    function getMyRole(): string;
+    /**
+     * Returns true if this is main process.
+     */
+    function isCEO(): boolean;
+}
+export = Collab;
+```
 
-*   Reference / documentation
+## Examples
+Here you may find some pure examples of usage of collab-ms. Examples are ready-to-use, just copy&paste code into index.js file and run it.
 
-*   Examples
+### Basic usage example
+```es6
+const collab = require('./collab.js');
 
-*   TODO
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        (new collab.Manager((worker, msg) => {
+            console.log('Msg', msg, 'from worker');
+        })).newWorker('worker');
+        break;
 
-*   License
+    case 'worker': //Worker
+        (new collab.Worker()).send('Hi, ready to work!');
+        break;
+}
+```
+
+### Few Workers at the same level
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        const ceo = new collab.Manager((worker, msg) => {
+            console.log('Msg', msg, 'from worker', worker.name);
+        });
+        for (let i = 0; i < 3; i++) {
+            const name = ceo.newWorker('worker').name;
+
+            console.log('New worker is named', name);
+        }
+        break;
+
+    case 'worker': //Worker
+        const worker = new collab.Worker();
+        worker.send('Hi, ready to work!');
+        break;
+}
+```
+
+### Basic usage with Promises
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        (new collab.Manager()).newWorker('worker').sendWithPromise('Hi!').then(ans => {
+            console.log('Answer from worker:', ans);
+        })
+        break;
+
+    case 'worker': //Worker
+        new collab.Worker(null, (data, resolve, reject) => {
+            console.log('Request from CEO:', data);
+            resolve('Oh hey!');
+        });
+        break;
+}
+```
+
+### Basic Promises with error handling (reject)
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        const ceo = new collab.Manager();
+
+        const mathWorker = ceo.newWorker('mathWorker');
+        mathWorker.sendWithPromise({
+            a: 2,
+            b: 3
+        }).then(ans => {
+            console.log('Answer from worker', ans);
+        }).catch(err => {
+            console.log('Error in worker', err);
+        });
+        break;
+
+    case 'mathWorker': //Worker
+        const worker = new collab.Worker(null, (data, resolve, reject) => {
+            resolve( data.a + data.b );
+        });
+        break;
+}
+```
+
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        (new collab.Manager()).newWorker('worker').sendWithPromise('Can you work?').then(ans => {
+            console.log('Answer from worker:', ans);
+        }).catch(err => {
+            console.log('Error in worker:', err);
+        });
+        break;
+
+    case 'worker': //Worker
+        new collab.Worker(null, (data, resolve, reject) => {
+            console.log('Request from CEO:', data);
+            if (data.indexOf('work') > -1)
+                reject('704 Motivation Not Found');
+        });
+        break;
+}
+```
+
+### Mix of "async" random input and expected result of Promise call
+Both non-Promised and Promissed messages.
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        //We can receive "random input"
+        const ceo = new collab.Manager((worker, data) => {
+            console.log('Random input: ping from ' + worker.name);
+        });
+
+        const mathWorker = ceo.newWorker('mathWorker');
+
+        //And still we can send Promised call - when we expect answer
+        mathWorker.sendWithPromise({
+            a: 2,
+            b: 3
+        }).then(ans => {
+            console.log('Answer from worker', ans);
+        }).catch(err => {
+            console.log('Error from worker', err);
+        });
+        break;
+
+    case 'mathWorker': //Worker
+        const worker = new collab.Worker(null, (data, resolve, reject) => {
+            resolve( data.a + data.b );
+        });
+
+        setInterval(() => {
+            worker.send({}); // Just ping
+        }, 1000);
+        break;
+}
+```
+
+### Complex example - load balancing, Promises, tree structure
+The idea here is to sum all of the numbers in array multipied by 2. We also create tree structure:
+[@TODO IMAGE]
+
+```es6
+const collab = require('./collab.js');
+
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        (() => {
+            const ceo = new collab.Manager();
+            const balancer = ceo.newWorker('balancer');
+            balancer.sendWithPromise({
+                data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            }).then(ans => {
+                console.log('Answer from balancer', ans);
+            }).catch(err => {
+                console.log('Error from balancer', err);
+            });
+        })();
+        break;
+
+    case 'balancer': //Banalcer/queue
+        (() => {
+            const balancer = new collab.Balancer();
+            for (let i = 0; i < 3; i++) {
+                balancer.newBalancedWorker('mathWorker', 2);
+            }
+
+            //Im also Worker
+            const worker = new collab.Worker(null, (data, resolve, reject) => {
+                let promises = [];
+                data.data.forEach(number => {
+                    promises.push(balancer.addJobWithPromise({
+                        number
+                    }));
+                });
+
+                Promise.all(promises).then((numbers) => {
+                    const sum = numbers.reduce( ( acc, cur ) => acc + cur.result, 0 );
+                    resolve(sum);
+                }).catch(reject);
+            });
+        })();
+        break;
+
+    case 'mathWorker': //Worker
+        const worker = new collab.Worker(null, (data, resolve, reject) => {
+            setTimeout(() => {
+                resolve({
+                    result : data.number * 2
+                }, true);
+            }, 2000);
+        });
+        break;
+}
+ ```
+ 
+ ### Big tree structure - a lot of levels
+ This is usually not good idea, but it works.
+ ```es6
+ const collab = require('./collab.js');
+
+const structureDepth = 20;
+switch(collab.getMyRole()) {
+    case '': //Main/CEO
+        (() => {
+            const ceo = new collab.Manager((worker, data) => {
+                console.log('Input message from', worker.name, 'data is', data);
+            });
+
+            ceo.newWorker('nextLvlWorker', 'index', 1);
+        })();
+        break;
+
+    case 'nextLvlWorker':
+        (() => {
+            //Im also worker
+            const meWorker = new collab.Worker();
+            const meManager = new collab.Manager((worker, data) => {
+                console.log('Passing message from level', meWorker.getOptions()+1, 'to level', meWorker.getOptions());
+                data.levels.push(meWorker.getOptions());
+                meWorker.send(data);
+            });
+
+            console.log('Created nextLvlWorker level', meWorker.getOptions());
+
+            if (meWorker.getOptions() == structureDepth){
+                meWorker.send({
+                    levels:[structureDepth],
+                    info:'OK!',
+                });
+            } else {
+                meManager.newWorker('nextLvlWorker', 'index', meWorker.getOptions()+1);
+            }
+        })();
+        break;
+}
+```
+
+## TODO
+There are a lot of things to do or to add maybe later. The most important is to write **tests** right now to make it really high-qualiy. 
+ 
+## License
+MIT licensed.
+Created by Jakub Król, IT.focus.
