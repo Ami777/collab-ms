@@ -8,7 +8,8 @@ I created this library to be able to create complex tree-like-structure micro-se
 
 The name in shortcut for "collaboration". In this library we think about micro-services structure as about company. In fact, few concepts are based on management theory. We think about each level as about collaborators: Managers and Workers. Typically, first level is called CEO and is Manager. Each mid-level is both Manager and Worker. Last level is usually Worker.
 
-[@TODO GRAFIKA]
+![Diagram CEO - Worker, Worker](docs/images/diagram-collab-1.png "Diagram CEO - Worker, Worker")
+![Diagram advanced](docs/images/diagram-collab-2.png "Diagram advanced")
 
 ## Features
 
@@ -391,9 +392,9 @@ The result it:
 
 ### Auto balancing
 
-This is the last tutorial example. Here we will use special Balancer subtype of Manager. We will build structure like this: CEO-Balancer-Worker, Worker, Worker.
+This is the last tutorial example. Here we will use special Balancer subtype of Manager. We will build structure like this:
 
-[@TODO OBRAZEK]
+![Diagram CEO - Balancer - Worker, Worker, Worker](docs/images/diagram-balancer.png "Diagram CEO - Balancer - Worker, Worker, Worker")
 
 We will tell Balancer to let each of 3 Workers to make 2 jobs at once. Each Worker will finish it's job after 2 seconds. Then, CEO will tell Balancer to give Workers 10 jobs.
 
@@ -934,7 +935,8 @@ switch(collab.getMyRole()) {
 
 ### Complex example - load balancing, Promises, tree structure
 The idea here is to sum all of the numbers in array multipied by 2. We also create tree structure:
-[@TODO IMAGE]
+
+![Diagram two way CEO - Balancer - Worker, Worker, Worker](docs/images/diagram-balancer-2-way.png "Diagram two way CEO - Balancer - Worker, Worker, Worker")
 
 ```es6
 const collab = require('./collab.js');
