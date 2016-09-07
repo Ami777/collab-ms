@@ -62,7 +62,9 @@ First, Manager and structure. Then Worker. Then communication. Then some fun.
 
 First, let's create new project with index.js file. Then install collab-ms from npm:
 
-@TODO!
+```console
+npm instal collab-ms
+```
 
 Add library to your code:
 ```es6
