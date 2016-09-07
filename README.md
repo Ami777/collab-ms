@@ -2,6 +2,17 @@
 
 Simple, yet complete micro-services library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues.
 
+Install:
+```console
+npm install collab-ms
+```
+
+GitHub:
+https://github.com/Ami777/collab-m
+
+npm:
+https://www.npmjs.com/package/collab-ms
+
 ## The idea
 
 I created this library to be able to create complex tree-like-structure micro-services architecture in my Node apps. The idea was to create simple, yet complete solution with good quality typed code (TypeScript & ES6, however you can use this library in pure JS without any additional steps). ZERO external dependencies.
