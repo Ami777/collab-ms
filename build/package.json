@@ -1,0 +1,15 @@
+{
+  "name": "collabMicroservices",
+  "version": "0.1.0",
+  "description": "Collab Microservices",
+  "main": "collab.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified :( TODO\" && exit 1"
+  },
+  "author": "Jakub Król, IT.focus",
+  "license": "ISC",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

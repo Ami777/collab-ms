@@ -1,0 +1,33 @@
+{
+  "name": "collab-ms",
+  "version": "0.1.0",
+  "description": "Simple, yet complete micro-services library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues.",
+  "main": "./build/collab.js",
+  "typings": "./build/collab.d.ts",
+  "typescript": "./build/collab.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified :( TODO\" && exit 1"
+  },
+  "author": "Jakub Król IT.focus <contact@itdotfocus.com> (http://itdotfocus.com)",
+  "repository": "Ami777/collab-ms",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "browserify": "^13.0.0",
+    "gulp": "^3.9.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-ts": "^0.3.0",
+    "gulp-typescript": "^2.13.6",
+    "gulp-uglify": "^1.5.3",
+    "gulp-util": "^3.0.7",
+    "lodash.assign": "^4.0.8",
+    "merge2": "^1.0.2",
+    "tsify": "^0.14.7",
+    "typescript": "^1.8.9",
+    "typescript-compiler": "^1.4.1-2",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0",
+    "walk-sync": "^0.2.6",
+    "watchify": "^3.7.0"
+  }
+}
