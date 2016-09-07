@@ -1,9 +1,5 @@
 "use strict";
 const cp = require('child_process');
-/*
- * @TODO: Better typings, typing, typings ;)
- * @TODO: READ ME, open source ;)
- */
 var Collab;
 (function (Collab) {
     function _isObject(value) {

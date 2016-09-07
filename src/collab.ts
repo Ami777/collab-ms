@@ -1,11 +1,6 @@
 import {ChildProcess} from "child_process";
 import cp = require('child_process');
 
-/*
- * @TODO: Better typings, typing, typings ;)
- * @TODO: READ ME, open source ;)
- */
-
 module Collab {
     function _isObject(value : any) {
         return Object.prototype.toString.call(value) == '[object Object]';
