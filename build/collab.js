@@ -26,18 +26,64 @@ var Collab;
         }
         return clearObj;
     }
-    class Manager {
-        /**
-         * Class constructor for Manager - CEO and mid-level managers.
-         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
-         */
-        constructor(onWorkerMessage) {
-            this.onWorkerMessage = onWorkerMessage;
-            this.workers = [];
+    class PromiseCommunicationBase {
+        constructor() {
             this.promiseIdx = 0;
             this.promises = [];
         }
-        onMessage(worker, data) {
+        _buildFuncSendWithPromise(process) {
+            return (data) => {
+                let promises;
+                const promiseId = this.promiseIdx++;
+                const promise = new Promise((resolve, reject) => {
+                    promises = {
+                        id: promiseId,
+                        resolve: resolve,
+                        reject: reject,
+                    };
+                });
+                this.promises.push(promises);
+                const dataWithPromise = Object.assign({}, {
+                    'promisedReq$': true,
+                    'promiseId$': promiseId
+                }, _objectifyData(data));
+                process.send(dataWithPromise);
+                return promise;
+            };
+        }
+        _makeResolveFunc(promiseId, sendFunc, sendWorkDoneFunc) {
+            return (data = null, sendWorkDone = false) => {
+                if (!sendWorkDoneFunc && sendWorkDone)
+                    throw "Invalid type of process (not Worker) to send workDone answer.";
+                const dataWithPromise = {
+                    'promised$': true,
+                    'promiseId$': promiseId,
+                    'promiseError$': null,
+                    'promiseResult$': data
+                };
+                if (sendWorkDone && sendWorkDoneFunc)
+                    sendWorkDoneFunc(dataWithPromise);
+                else
+                    sendFunc(dataWithPromise);
+            };
+        }
+        _makeRejectFunc(promiseId, sendFunc, sendWorkDoneFunc) {
+            return (err = null, sendWorkDone = false) => {
+                if (!sendWorkDoneFunc && sendWorkDone)
+                    throw "Invalid type of process (not Worker) to send workDone answer.";
+                const dataWithPromise = {
+                    'promised$': true,
+                    'promiseId$': promiseId,
+                    'promiseError$': err,
+                    'promiseResult$': null
+                };
+                if (sendWorkDone && sendWorkDoneFunc)
+                    sendWorkDoneFunc(dataWithPromise);
+                else
+                    sendFunc(dataWithPromise);
+            };
+        }
+        filterMsgIfPromised(data, promisedMsgClb, sendFunc, sendWorkDoneFunc) {
             if (data['promised$']) {
                 const promiseIdx = this.promises.findIndex(promises => promises.id == data['promiseId$']);
                 const promises = this.promises[promiseIdx];
@@ -46,8 +92,29 @@ var Collab;
                     promises.reject(data['promiseError$']);
                 else
                     promises.resolve(data['promiseResult$']);
+                return true;
             }
-            else {
+            if (data['promisedReq$']) {
+                if (promisedMsgClb)
+                    promisedMsgClb(_prepClearData(data), this._makeResolveFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc), this._makeRejectFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc));
+            }
+            return false;
+        }
+    }
+    Collab.PromiseCommunicationBase = PromiseCommunicationBase;
+    class Manager extends PromiseCommunicationBase {
+        /**
+         * Class constructor for Manager - CEO and mid-level managers.
+         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
+         */
+        constructor(onWorkerMessage, onWorkerPromisedMessage) {
+            super();
+            this.onWorkerMessage = onWorkerMessage;
+            this.onWorkerPromisedMessage = onWorkerPromisedMessage;
+            this.workers = [];
+        }
+        onMessage(worker, data) {
+            if (!this.filterMsgIfPromised(data, this.onWorkerPromisedMessage, worker.send)) {
                 if (this.onWorkerMessage)
                     this.onWorkerMessage(worker, _prepClearData(data), worker.send);
             }
@@ -100,26 +167,6 @@ var Collab;
          */
         getWorkers(type) {
             return this.workers.filter(worker => worker.type == type);
-        }
-        _buildFuncSendWithPromise(process) {
-            return (data) => {
-                let promises;
-                const promiseId = this.promiseIdx++;
-                const promise = new Promise((resolve, reject) => {
-                    promises = {
-                        id: promiseId,
-                        resolve: resolve,
-                        reject: reject,
-                    };
-                });
-                this.promises.push(promises);
-                const dataWithPromise = Object.assign({}, {
-                    'promised$': true,
-                    'promiseId$': promiseId
-                }, _objectifyData(data));
-                process.send(dataWithPromise);
-                return promise;
-            };
         }
     }
     Collab.Manager = Manager;
@@ -218,15 +265,17 @@ var Collab;
         }
     }
     Collab.Balancer = Balancer;
-    class Worker {
+    class Worker extends PromiseCommunicationBase {
         /**
          * Class constructor for Worker - it will be any worker including mid-level manager.
          * @param onManagerMessage Callback which will run when non-Promised message arrives to Worker from Manager.
          * @param onManagerMessageWithPromise Callback which will run when Promised message arrives to Worker from Manager.
          */
         constructor(onManagerMessage, onManagerMessageWithPromise) {
+            super();
             this.onManagerMessage = onManagerMessage;
             this.onManagerMessageWithPromise = onManagerMessageWithPromise;
+            this.sendWithPromise = this._buildFuncSendWithPromise(process);
             process.on('message', (data) => {
                 this.onMessage(data);
             });
@@ -253,42 +302,10 @@ var Collab;
             return this.name;
         }
         onMessage(data) {
-            if (data['promised$']) {
-                if (this.onManagerMessageWithPromise)
-                    this.onManagerMessageWithPromise(_prepClearData(data), this._makeResolveFunc(data['promiseId$']), this._makeRejectFunc(data['promiseId$']));
-            }
-            else {
+            if (!this.filterMsgIfPromised(data, this.onManagerMessageWithPromise, this.send, this.sendWorkDone)) {
                 if (this.onManagerMessage)
                     this.onManagerMessage(_prepClearData(data), this.send, this.sendWorkDone);
             }
-        }
-        _makeResolveFunc(promiseId) {
-            return (data = null, sendWorkDone = false) => {
-                const dataWithPromise = {
-                    'promised$': true,
-                    'promiseId$': promiseId,
-                    'promiseError$': null,
-                    'promiseResult$': data
-                };
-                if (sendWorkDone)
-                    this.sendWorkDone(dataWithPromise);
-                else
-                    this.send(dataWithPromise);
-            };
-        }
-        _makeRejectFunc(promiseId) {
-            return (err = null, sendWorkDone = false) => {
-                const dataWithPromise = {
-                    'promised$': true,
-                    'promiseId$': promiseId,
-                    'promiseError$': err,
-                    'promiseResult$': null
-                };
-                if (sendWorkDone)
-                    this.sendWorkDone(dataWithPromise);
-                else
-                    this.send(dataWithPromise);
-            };
         }
         /**
          * Sends normal, non-Promised message to closest Manager.

@@ -94,16 +94,24 @@ declare module Collab {
         resolve?: ResolveFunction;
         reject?: RejectFunction;
     }
-    class Manager {
-        protected onWorkerMessage: WorkerMsgClbFunction;
+    class PromiseCommunicationBase {
         protected promiseIdx: number;
         protected promises: Promises[];
+        constructor();
+        protected _buildFuncSendWithPromise(process: ChildProcess | NodeJS.Process): NormalSendFunction;
+        protected _makeResolveFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (data?: any, sendWorkDone?: boolean) => void;
+        protected _makeRejectFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (err?: any, sendWorkDone?: boolean) => void;
+        protected filterMsgIfPromised(data: any, promisedMsgClb: ManagerPromisedMsgClbFunction, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): boolean;
+    }
+    class Manager extends PromiseCommunicationBase {
+        protected onWorkerMessage: WorkerMsgClbFunction;
+        protected onWorkerPromisedMessage: ManagerPromisedMsgClbFunction;
         protected workers: WorkerInfo[];
         /**
          * Class constructor for Manager - CEO and mid-level managers.
          * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
          */
-        constructor(onWorkerMessage?: WorkerMsgClbFunction);
+        constructor(onWorkerMessage?: WorkerMsgClbFunction, onWorkerPromisedMessage?: ManagerPromisedMsgClbFunction);
         protected onMessage(worker: WorkerInfo, data: any): void;
         /**
          * Adds new Worker using child_process.fork() and links it with this Manager. This will return WorkerInfo instance with the possibilities to send messages and with unique name field.
@@ -124,7 +132,6 @@ declare module Collab {
          * @param type Type of Worker.
          */
         getWorkers(type: string): WorkerInfo[];
-        private _buildFuncSendWithPromise(process);
     }
     class Balancer extends Manager {
         private queue;
@@ -157,12 +164,17 @@ declare module Collab {
         addJobWithPromise(data?: any): Promise<any>;
         protected onMessage(worker: WorkerInfo, data: any): void;
     }
-    class Worker {
+    class Worker extends PromiseCommunicationBase {
         onManagerMessage: ManagerMsgClbFunction;
         onManagerMessageWithPromise: ManagerPromisedMsgClbFunction;
         private type;
         private name;
         private options;
+        /**
+         * Sends normal, Promised message to closest Manager.
+         * @param data Any data you want to pass to the Manager.
+         */
+        sendWithPromise: NormalSendFunction;
         /**
          * Class constructor for Worker - it will be any worker including mid-level manager.
          * @param onManagerMessage Callback which will run when non-Promised message arrives to Worker from Manager.
@@ -182,8 +194,6 @@ declare module Collab {
          */
         getName(): string;
         private onMessage(data);
-        private _makeResolveFunc(promiseId);
-        private _makeRejectFunc(promiseId);
         /**
          * Sends normal, non-Promised message to closest Manager.
          * @param data Any data you want to pass to the Manager.

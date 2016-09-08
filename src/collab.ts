@@ -137,23 +137,81 @@ module Collab {
         reject?     :   RejectFunction;
     }
 
-    export class Manager {
+    export class PromiseCommunicationBase {
         protected promiseIdx: number;
         protected promises: Promises[];
 
-        protected workers: WorkerInfo[];
-
-        /**
-         * Class constructor for Manager - CEO and mid-level managers.
-         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
-         */
-        public constructor(protected onWorkerMessage?: WorkerMsgClbFunction) {
-            this.workers = [];
+        public constructor(){
             this.promiseIdx = 0;
             this.promises = [];
         }
 
-        protected onMessage(worker: WorkerInfo, data: any) {
+        protected _buildFuncSendWithPromise(process: ChildProcess | NodeJS.Process) : NormalSendFunction {
+            return (data): Promise<any> => {
+                let promises: Promises;
+                const promiseId = this.promiseIdx++;
+
+                const promise = new Promise<any>((resolve, reject) => {
+                    promises = {
+                        id: promiseId,
+                        resolve,
+                        reject,
+                    };
+                });
+
+                this.promises.push(promises);
+
+                const dataWithPromise = Object.assign({}, {
+                    'promisedReq$': true,
+                    'promiseId$': promiseId
+                }, _objectifyData(data));
+
+                process.send(dataWithPromise);
+
+                return promise;
+            };
+        }
+
+
+        protected _makeResolveFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?:NormalSendFunction) {
+            return (data: any = null, sendWorkDone: boolean = false) => {
+                if (!sendWorkDoneFunc && sendWorkDone)
+                    throw "Invalid type of process (not Worker) to send workDone answer.";
+
+                const dataWithPromise = {
+                    'promised$': true,
+                    'promiseId$': promiseId,
+                    'promiseError$': null,
+                    'promiseResult$': data
+                };
+
+                if (sendWorkDone && sendWorkDoneFunc)
+                    sendWorkDoneFunc(dataWithPromise);
+                else
+                    sendFunc(dataWithPromise);
+            }
+        }
+
+        protected _makeRejectFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?:NormalSendFunction) {
+            return (err: any = null, sendWorkDone: boolean = false) => {
+                if (!sendWorkDoneFunc && sendWorkDone)
+                    throw "Invalid type of process (not Worker) to send workDone answer.";
+
+                const dataWithPromise = {
+                    'promised$': true,
+                    'promiseId$': promiseId,
+                    'promiseError$': err,
+                    'promiseResult$': null
+                };
+
+                if (sendWorkDone && sendWorkDoneFunc)
+                    sendWorkDoneFunc(dataWithPromise);
+                else
+                    sendFunc(dataWithPromise);
+            }
+        }
+
+        protected filterMsgIfPromised(data : any, promisedMsgClb : ManagerPromisedMsgClbFunction, sendFunc: NormalSendFunction, sendWorkDoneFunc?:NormalSendFunction){
             if (data['promised$']) {
                 const promiseIdx = this.promises.findIndex(promises => promises.id == data['promiseId$']);
                 const promises = this.promises[promiseIdx];
@@ -163,7 +221,34 @@ module Collab {
                     promises.reject(data['promiseError$']);
                 else
                     promises.resolve(data['promiseResult$']);
-            } else {
+
+                return true;
+            }
+            if (data['promisedReq$']) {
+                if (promisedMsgClb)
+                    promisedMsgClb(_prepClearData(data), this._makeResolveFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc), this._makeRejectFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc))
+            }
+
+            return false;
+        }
+    }
+
+    export class Manager extends PromiseCommunicationBase {
+
+        protected workers: WorkerInfo[];
+
+        /**
+         * Class constructor for Manager - CEO and mid-level managers.
+         * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
+         */
+        public constructor(protected onWorkerMessage?: WorkerMsgClbFunction, protected onWorkerPromisedMessage?: ManagerPromisedMsgClbFunction) {
+            super();
+
+            this.workers = [];
+        }
+
+        protected onMessage(worker: WorkerInfo, data: any) {
+            if (!this.filterMsgIfPromised(data, this.onWorkerPromisedMessage, worker.send)) {
                 if (this.onWorkerMessage)
                     this.onWorkerMessage(worker, _prepClearData(data), worker.send);
             }
@@ -223,32 +308,6 @@ module Collab {
          */
         public getWorkers(type: string): WorkerInfo[] {
             return this.workers.filter(worker => worker.type == type);
-        }
-
-        private _buildFuncSendWithPromise(process: ChildProcess) : NormalSendFunction {
-            return (data): Promise<any> => {
-                let promises: Promises;
-                const promiseId = this.promiseIdx++;
-
-                const promise = new Promise<any>((resolve, reject) => {
-                    promises = {
-                        id: promiseId,
-                        resolve,
-                        reject,
-                    };
-                });
-
-                this.promises.push(promises);
-
-                const dataWithPromise = Object.assign({}, {
-                    'promised$': true,
-                    'promiseId$': promiseId
-                }, _objectifyData(data));
-
-                process.send(dataWithPromise);
-
-                return promise;
-            };
         }
     }
 
@@ -368,10 +427,16 @@ module Collab {
         }
     }
 
-    export class Worker {
+    export class Worker extends PromiseCommunicationBase {
         private type: string;
         private name: string;
         private options: any;
+
+        /**
+         * Sends normal, Promised message to closest Manager.
+         * @param data Any data you want to pass to the Manager.
+         */
+        public sendWithPromise : NormalSendFunction;
 
         /**
          * Class constructor for Worker - it will be any worker including mid-level manager.
@@ -379,6 +444,10 @@ module Collab {
          * @param onManagerMessageWithPromise Callback which will run when Promised message arrives to Worker from Manager.
          */
         public constructor(public onManagerMessage?: ManagerMsgClbFunction, public onManagerMessageWithPromise?: ManagerPromisedMsgClbFunction) {
+            super();
+
+            this.sendWithPromise = this._buildFuncSendWithPromise(process);
+
             process.on('message', (data) => {
                 this.onMessage(data);
             });
@@ -408,44 +477,9 @@ module Collab {
         }
 
         private onMessage(data: any) {
-            if (data['promised$']) {
-                if (this.onManagerMessageWithPromise)
-                    this.onManagerMessageWithPromise(_prepClearData(data), this._makeResolveFunc(data['promiseId$']), this._makeRejectFunc(data['promiseId$']))
-            } else {
+            if (!this.filterMsgIfPromised(data, this.onManagerMessageWithPromise, this.send, this.sendWorkDone)) {
                 if (this.onManagerMessage)
                     this.onManagerMessage(_prepClearData(data), this.send, this.sendWorkDone);
-            }
-        }
-
-        private _makeResolveFunc(promiseId: number) {
-            return (data: any = null, sendWorkDone: boolean = false) => {
-                const dataWithPromise = {
-                    'promised$': true,
-                    'promiseId$': promiseId,
-                    'promiseError$': null,
-                    'promiseResult$': data
-                };
-
-                if (sendWorkDone)
-                    this.sendWorkDone(dataWithPromise);
-                else
-                    this.send(dataWithPromise);
-            }
-        }
-
-        private _makeRejectFunc(promiseId: number) {
-            return (err: any = null, sendWorkDone: boolean = false) => {
-                const dataWithPromise = {
-                    'promised$': true,
-                    'promiseId$': promiseId,
-                    'promiseError$': err,
-                    'promiseResult$': null
-                };
-
-                if (sendWorkDone)
-                    this.sendWorkDone(dataWithPromise);
-                else
-                    this.send(dataWithPromise);
             }
         }
 
