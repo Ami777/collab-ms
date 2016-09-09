@@ -1051,8 +1051,9 @@ switch(collab.getMyRole()) {
 There are a lot of things to do or to add maybe later. The most important is to write **tests** right now to make it really high-qualiy. 
 
 ## Changelog
-0.2.0 Added two-way Promises. Both Manager and Worker may now send Promised messages and wait for response.
-0.1.1 First usable public version
+ * 0.2.1 Small fixes of two-way Promises.
+ * 0.2.0 Added two-way Promises. Both Manager and Worker may now send Promised messages and wait for response.
+ * 0.1.1 First usable public version.
  
 ## License
 MIT licensed.

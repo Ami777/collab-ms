@@ -21,7 +21,7 @@ module Collab {
             return dataObj['dataObjectified$'];
         }
 
-        const reservedInternalProps = ['promised$', 'promiseError$', 'promiseResult$', 'promiseId$', 'workDone$', 'maxJobsAtOnce$', 'jobsCount$'];
+        const reservedInternalProps = ['promised$', 'promisedReq$', 'promiseError$', 'promiseResult$', 'promiseId$', 'workDone$', 'maxJobsAtOnce$', 'jobsCount$'];
 
         let clearObj = {};
         for (let name in dataObj) {
@@ -226,7 +226,9 @@ module Collab {
             }
             if (data['promisedReq$']) {
                 if (promisedMsgClb)
-                    promisedMsgClb(_prepClearData(data), this._makeResolveFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc), this._makeRejectFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc))
+                    promisedMsgClb(_prepClearData(data), this._makeResolveFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc), this._makeRejectFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc));
+
+                return true;
             }
 
             return false;

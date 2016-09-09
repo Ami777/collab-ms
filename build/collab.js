@@ -18,7 +18,7 @@ var Collab;
         if (dataObj.hasOwnProperty('dataObjectified$')) {
             return dataObj['dataObjectified$'];
         }
-        const reservedInternalProps = ['promised$', 'promiseError$', 'promiseResult$', 'promiseId$', 'workDone$', 'maxJobsAtOnce$', 'jobsCount$'];
+        const reservedInternalProps = ['promised$', 'promisedReq$', 'promiseError$', 'promiseResult$', 'promiseId$', 'workDone$', 'maxJobsAtOnce$', 'jobsCount$'];
         let clearObj = {};
         for (let name in dataObj) {
             if (reservedInternalProps.indexOf(name) == -1 /*Damn, need another typing for includes...*/)
@@ -97,6 +97,7 @@ var Collab;
             if (data['promisedReq$']) {
                 if (promisedMsgClb)
                     promisedMsgClb(_prepClearData(data), this._makeResolveFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc), this._makeRejectFunc(data['promiseId$'], sendFunc, sendWorkDoneFunc));
+                return true;
             }
             return false;
         }
