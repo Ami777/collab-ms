@@ -55,16 +55,22 @@ var Collab;
             return (data = null, sendWorkDone = false) => {
                 if (!sendWorkDoneFunc && sendWorkDone)
                     throw "Invalid type of process (not Worker) to send workDone answer.";
-                const dataWithPromise = {
-                    'promised$': true,
-                    'promiseId$': promiseId,
-                    'promiseError$': null,
-                    'promiseResult$': data
-                };
-                if (sendWorkDone && sendWorkDoneFunc)
-                    sendWorkDoneFunc(dataWithPromise);
-                else
-                    sendFunc(dataWithPromise);
+                (new Promise((resolve, reject) => {
+                    resolve(data);
+                })).then(dataResolved => {
+                    const dataWithPromise = {
+                        'promised$': true,
+                        'promiseId$': promiseId,
+                        'promiseError$': null,
+                        'promiseResult$': dataResolved
+                    };
+                    if (sendWorkDone && sendWorkDoneFunc)
+                        sendWorkDoneFunc(dataWithPromise);
+                    else
+                        sendFunc(dataWithPromise);
+                }, error => {
+                    this._makeRejectFunc(promiseId, sendFunc, sendWorkDoneFunc)(error, sendWorkDone);
+                });
             };
         }
         _makeRejectFunc(promiseId, sendFunc, sendWorkDoneFunc) {
