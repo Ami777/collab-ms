@@ -1,6 +1,6 @@
 {
   "name": "collab-ms",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Simple, yet complete micro-services library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues.",
   "main": "./build/collab.js",
   "typings": "./build/collab.d.ts",
