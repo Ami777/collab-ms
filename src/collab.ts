@@ -416,7 +416,7 @@ module Collab {
             this.promises.push(promises);
 
             const dataWithPromise = Object.assign({}, {
-                'promised$': true,
+                'promisedReq$': true,
                 'promiseId$': promiseId
             }, _objectifyData(data));
 
