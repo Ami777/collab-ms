@@ -198,12 +198,12 @@ declare module Collab {
          * Sends normal, non-Promised message to closest Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        send(data?: any): void;
+        send: (data?: any) => void;
         /**
          * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        sendWorkDone(data?: any): void;
+        sendWorkDone: (data?: any) => void;
     }
     /**
      * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.

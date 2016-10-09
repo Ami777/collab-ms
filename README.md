@@ -1061,6 +1061,7 @@ switch(collab.getMyRole()) {
 There are a lot of things to do or to add maybe later. The most important is to write **tests** right now to make it really high-qualiy. 
 
 ## Changelog
+ * 0.2.4 Fix of Promised messages (this for resolve/reject fixed).
  * 0.2.3 Fix of Promised messages in Balancer.
  * 0.2.2 Added possibility to chain Promised messages. Updated reference/docs.
  * 0.2.1 Small fixes of two-way Promises.

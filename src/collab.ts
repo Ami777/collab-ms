@@ -495,7 +495,7 @@ module Collab {
          * Sends normal, non-Promised message to closest Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        public send(data: any = null) {
+        public send = (data: any = null) => {
             process.send(_objectifyData(data));
         }
 
@@ -503,7 +503,7 @@ module Collab {
          * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        public sendWorkDone(data: any = null) {
+        public sendWorkDone = (data: any = null) => {
             const dataWorkDone = Object.assign({}, {
                 'workDone$': true
             }, _objectifyData(data));

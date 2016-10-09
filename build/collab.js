@@ -282,6 +282,23 @@ var Collab;
             super();
             this.onManagerMessage = onManagerMessage;
             this.onManagerMessageWithPromise = onManagerMessageWithPromise;
+            /**
+             * Sends normal, non-Promised message to closest Manager.
+             * @param data Any data you want to pass to the Manager.
+             */
+            this.send = (data = null) => {
+                process.send(_objectifyData(data));
+            };
+            /**
+             * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
+             * @param data Any data you want to pass to the Manager.
+             */
+            this.sendWorkDone = (data = null) => {
+                const dataWorkDone = Object.assign({}, {
+                    'workDone$': true
+                }, _objectifyData(data));
+                this.send(dataWorkDone);
+            };
             this.sendWithPromise = this._buildFuncSendWithPromise(process);
             process.on('message', (data) => {
                 this.onMessage(data);
@@ -313,23 +330,6 @@ var Collab;
                 if (this.onManagerMessage)
                     this.onManagerMessage(_prepClearData(data), this.send, this.sendWorkDone);
             }
-        }
-        /**
-         * Sends normal, non-Promised message to closest Manager.
-         * @param data Any data you want to pass to the Manager.
-         */
-        send(data = null) {
-            process.send(_objectifyData(data));
-        }
-        /**
-         * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
-         * @param data Any data you want to pass to the Manager.
-         */
-        sendWorkDone(data = null) {
-            const dataWorkDone = Object.assign({}, {
-                'workDone$': true
-            }, _objectifyData(data));
-            this.send(dataWorkDone);
         }
     }
     Collab.Worker = Worker;
