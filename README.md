@@ -1,6 +1,6 @@
 # collab-ms - simple micro-services for Node
 
-Simple, yet complete micro-services library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues.
+Simple, yet complete micro-services[1] library for Node. Zero dependencies, high-quality typed code, simple flow, tree-like structure support, optional Promises, load balancing and queues. pm2 compatible.
 
 Install:
 ```console
@@ -12,6 +12,8 @@ https://github.com/Ami777/collab-m
 
 npm:
 https://www.npmjs.com/package/collab-ms
+
+*[1] More like pseudo-micro-services. We currently do not support different languages, TCP/IP communication etc.*
 
 ## The idea
 
@@ -33,12 +35,15 @@ The name in shortcut for "collaboration". In this library we think about micro-s
 *   Add auto balancing and queues
 *   Combine normal messages, Promised messages and auto balancing how you need to
 *   Spawn new forks of process, communicate via built-in ICS (well, you don't need to go into details, this is transparent for you)
+*   pm2 compatible (since 1.0.0) - spawn new processes and communicate using pm2 API and monitor them (transparent for you). PMX also works.
 
 ## Basic concepts
 
 The communication is done in Manager-Worker manner. When you run your process you usually want to spawn main Manager - we call it CEO Manager. This Manager may spawn another Workers and Managers. This is done automatically by forking your main process. It's up to you to decide how to use collab-ms - we do not force you to anything. Here we will cover some basic about communication and our proposition of use.
 
 ### Terminology:
+
+*   **Transport** - Transport is the way you want to use Collab. You can use pure Node or pm2.
 
 *   **Manager** - type of process which may create and manage Workers. It may send messages to Workers and receive answers. It can also receive non-promised messages (without any context).
 
@@ -63,12 +68,17 @@ First, Manager and structure. Then Worker. Then communication. Then some fun.
 First, let's create new project with index.js file. Then install collab-ms from npm:
 
 ```console
-npm instal collab-ms
+npm i collab-ms --save
 ```
 
 Add library to your code:
 ```es6
-const collab = require('collab');
+const collab = require('collab-ms');
+```
+
+You need to decide which Transport to use. We will now use Transport built-in in Collab and Node :
+```es6
+collab.setTransport( collab.useTransportCpFork() );
 ```
 
 We need to create basic structure. First, we will create first Manager - CEO:
@@ -123,7 +133,9 @@ This will fork new process with type 'workerExample' (this is our name, it can b
 
 Let's add console.log() in both parts and now the complete code looks like this:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 const ceo = new collab.Manager();
 if (collab.isCEO()){
@@ -178,7 +190,9 @@ You can send whatever you want - it may be primitive like in our example or more
 
 Our code is now:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 const ceo = new collab.Manager();
 if (collab.isCEO()){
@@ -206,23 +220,27 @@ As you can see, everything is working as expected. Also, you can see name automa
 
 Manager can send messages, too. This will take additional steps as Manager may have lots of Workers. Unlike Worker which have only one Manager. We need to access our Worker from Manager using one of these options:
 
-*   Assign to variable value returned by Manager.newWorker() (WorkerInfo)
+*   Wait for Manager.newWorker() to process - it will return Promise that resolves to Worker (WorkerInfo)
 *   Find Worker by it's name (will also return null or WorkerInfo)
 *   Find all Workers by type (will return array of WorkerInfos).
 
 We will use first option right now. So we modify creation line to:
 ```es6
-const workerExample = ceo.newWorker('workerExample');
+ceo.newWorker('workerExample').then( workerExample => {
+
+});
 ```
 
-Now we can simply call WorkerInfo.send() method:
+Now we can simply call WorkerInfo.send() method in the callback:
 ```es6
 workerExample.send('Hi worker!');
 ```
 
 The complete code is now:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 const ceo = new collab.Manager();
 if (collab.isCEO()){
@@ -230,8 +248,9 @@ if (collab.isCEO()){
  const ceo = new collab.Manager(function (worker, data) {
  console.log('Message', data, 'from', worker.name);
  });
- const workerExample  = ceo.newWorker('workerExample');
- workerExample.send('Hi worker!');
+ ceo.newWorker('workerExample').then( workerExample => {
+   workerExample.send('Hi worker!');
+ });
 } else {
  //Worker code
  const worker = new collab.Worker(function (data) {
@@ -247,11 +266,34 @@ Message Hi worker! from Manager
 Message Hi boss! from WORKEREXAMPLE #1
 ```
 
+We could also use cool async/await syntax:
+```es6
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
+
+const ceo = new collab.Manager();
+if (collab.isCEO()){
+ //CEO code
+ const ceo = new collab.Manager(function (worker, data) {
+ console.log('Message', data, 'from', worker.name);
+ });
+ const workerExample = await ceo.newWorker('workerExample');
+ workerExample.send('Hi worker!');
+} else {
+ //Worker code
+ const worker = new collab.Worker(function (data) {
+ console.log('Message', data, 'from Manager');
+ });
+ worker.send('Hi boss!');
+}
+```
+
 That's all. You have basic communication done. We will now do some interesting stuff.
 
 ### Promises and some real work to do
 
-This will modify previous example. We will use Promised messages to simplify the flow of our code. You may find Bluebird library helpful for Promises. We we also request Worker to do some real work - to add two numbers.
+This will modify previous example. We will use Promised messages to simplify the flow of our code. You may find Bluebird library helpful for Promises. We also request Worker to do some real work - to add two numbers.
 
 CEO doesn't need callback function as we won't use non-Promised mesages. However, you can still use them and mix both methods. It can be helpful to make your code readable but also to be able to receive non-Promised messages about the state of the Worker etc.
 
@@ -259,11 +301,12 @@ We will also use WorkerInfo.sendWithPromise() method instead of the WorkerInfo.s
 ```es6
  //CEO code
  const ceo = new collab.Manager();
- const workerExample  = ceo.newWorker('workerExample');
- workerExample.sendWithPromise({a: 2, b: 3}).then(function(result){
- console.log('Result of 2+3 from Worker is', result);
- }).catch(function(err){
- console.log('Error in Worker', err);
+ ceo.newWorker('workerExample').then( workerExample => {
+     workerExample.sendWithPromise({a: 2, b: 3}).then(function(result){
+        console.log('Result of 2+3 from Worker is', result);
+     }).catch(function(err){
+        console.log('Error in Worker', err);
+     });
  });
  ```
 
@@ -288,20 +331,24 @@ Promises in collab-ms are easy and good-looking, aren't they?
 
 Now we will try to make more complex structure. This will be CEO Manager-Manager/Worker-Worker. It looks like this, because usually mid-level manager is both Manager and Worker. Then we will try to communicate between closest processes (CEO-Manager and Manager-Worker). At the end we will take a look at passing messages up and down in structure (CEO-Worker and answer Worker-CEO).
 
+In this tutorial we will use async/await for the creation of Workers.
+
 To create our structure we need to modify and simplify our code like this:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
- case '': //CEO
- const ceo = new collab.Manager();
- const midLevelManager  = ceo.newWorker('midLevelManager');
+     case '': //CEO
+         const ceo = new collab.Manager();
+         const midLevelManager = await ceo.newWorker('midLevelManager');
 
         break;
     case 'midLevelManager': //Mid-level Manager
         const midWorker = new collab.Worker();
         const manager = new collab.Manager();
-        const newWorker  = ceo.newWorker('worker');
+        const newWorker = ceo.newWorker('worker');
 
         break;
     case 'worker': //Worker
@@ -315,12 +362,14 @@ Take a look - we use collab.getMyRole() function to get role of the process. Emp
 
 Let's add some simple Promises communication between CEO-Manager and Worker-Manager:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelManager  = ceo.newWorker('midLevelManager');
+        const midLevelManager  = await ceo.newWorker('midLevelManager');
         midLevelManager.sendWithPromise('Hi.').then(function(data){
             console.log('< Answer', data, 'from mid-level Manager');
         });
@@ -331,7 +380,7 @@ switch(collab.getMyRole()){
            resolve(data);
        });
        const manager = new collab.Manager();
-       const newWorker  = manager.newWorker('worker');
+       const newWorker  = await manager.newWorker('worker');
        newWorker.sendWithPromise('Yo!').then(function(data){
            console.log('< Answer', data, 'from Worker');
        });
@@ -358,19 +407,21 @@ Result is:
 
 Now we can try to pass messages from CEO to last Worker and answer from last Worker to CEO. It requires only some simple logic, we will also remove previous messages for clarity (but the logics let us send all of the messages):
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelManager  = ceo.newWorker('midLevelManager');
+        const midLevelManager  = await ceo.newWorker('midLevelManager');
         midLevelManager.sendWithPromise('Tell Worker to come to my office.').then(function(data){
             console.log('< Answer', data, 'from Worker');
         });
         break;
     case 'midLevelManager': //Mid-level Manager
         const manager = new collab.Manager();
-        const newWorker  = manager.newWorker('worker');
+        const newWorker  = await manager.newWorker('worker');
 
         const midWorker = new collab.Worker(null, function(data, resolve, reject){
             if (data.indexOf('Worker') > -1){
@@ -415,21 +466,25 @@ First we will use simple communication (work-done non-Promised messages). CEO wi
 
 Then we will use Promises for all the communication. The flow is almost the same, CEO will also tell Balancer to add jobs but CEO will get an answer from Balancer when all the jobs are done. We will need Bluebird library for this!
 
+In this tutorial we will use async/await for the creation of Workers.
+
 First, let's build our structure:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelBalancer  = ceo.newWorker('balancer');
+        const midLevelBalancer  = await ceo.newWorker('balancer');
 
         break;
     case 'balancer': //Balancer Manager
         const manager = new collab.Balancer();
         const midWorker = new collab.Worker();
         for ( let i = 0; i < 3; i++ )
-            manager.newBalancedWorker('worker', 2);
+            await manager.newBalancedWorker('worker', 2);
 
         break;
     case 'worker': //Worker
@@ -445,7 +500,7 @@ CEO and Balancer parts looks now like this:
 ```es6
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelBalancer  = ceo.newWorker('balancer');
+        const midLevelBalancer  = await ceo.newWorker('balancer');
         midLevelBalancer.send('add10jobs');
 
         break;
@@ -458,7 +513,7 @@ CEO and Balancer parts looks now like this:
             }
         });
         for ( let i = 0; i < 3; i++ )
-            manager.newBalancedWorker('worker', 2);
+            await manager.newBalancedWorker('worker', 2);
 
         break;
 ```
@@ -472,29 +527,31 @@ Now, we will add some test code to Worker:
         });
 ```
 
-Can you see the Worker.sendWorkDone() method? It is used to inform Balanced that one job is finished.
+Can you see the Worker.sendWorkDone() method? It is used to inform Balancer that one job is finished.
 
 And code to receive this message in Balancer, we will modify Balancer's constructor:
 ```es6
         const manager = new collab.Balancer(function(worker, data){
-console.log('Message ',data, 'from', worker.name);
+            console.log('Message ', data, 'from', worker.name);
         });
 ```
 
 Ready code looks like this:
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelBalancer  = ceo.newWorker('balancer');
+        const midLevelBalancer  = await ceo.newWorker('balancer');
         midLevelBalancer.send('add10jobs');
 
         break;
     case 'balancer': //Balancer Manager
         const manager = new collab.Balancer(function(worker, data){
-            console.log('Message ',data, 'from', worker.name);
+            console.log('Message ', data, 'from', worker.name);
         });
         const midWorker = new collab.Worker(function(data){
             if (data == 'add10jobs'){
@@ -503,7 +560,7 @@ switch(collab.getMyRole()){
             }
         });
         for ( let i = 0; i < 3; i++ )
-            manager.newBalancedWorker('worker', 2);
+            await manager.newBalancedWorker('worker', 2);
 
         break;
     case 'worker': //Worker
@@ -540,12 +597,14 @@ This is what Balancer is doing after adding or finishing the job:
 
 Let's change this code to use Promises, it will be a little bit more complex and will use Promise.all():
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()){
     case '': //CEO
         const ceo = new collab.Manager();
-        const midLevelBalancer  = ceo.newWorker('balancer');
+        const midLevelBalancer  = await ceo.newWorker('balancer');
         midLevelBalancer.sendWithPromise('add10jobs').then(function(data){
             console.log('Balancer told CEO that all jobs are done!', data);
         });
@@ -562,7 +621,7 @@ switch(collab.getMyRole()){
             }
         });
         for ( let i = 0; i < 3; i++ )
-            manager.newBalancedWorker('worker', 2);
+            await manager.newBalancedWorker('worker', 2);
 
         break;
     case 'worker': //Worker
@@ -585,10 +644,68 @@ Balancer told CEO that all jobs are done! [ 'Done!',  'Done!',  'Done!',  'Done!
 
 Now we have all: Promises, balancing, queue, tree structure. In just a few lines of code.
 
+## Upgrade guide and breaking changes
+
+### 0.X -> 1.X
+
+There were some breaking changes. Usually this means adding one line after requiring the lib + one small change when creating new Workers.
+
+1. You need to set up transport in your app. Take a look at Transports section below.
+2. In 0.X newWorker and newBalancedWorker returned WorkerInfo. Right now it is async and returns Promise that resolves into WorkerInfo. This change is caused by pm2 support (it spawns processes asynchronously). You only need to add .then() to newWorker and newBalancedWorker calls. Alternatively just use async/await.
+
+## Transports
+
+Transport is the way collab-ms will work. The way processes are spawned, managed and are communicating with each other. Transports are here to make collab-ms easy to use in different environments and transparent to you.
+
+**You need to set Transport for collab-ms before you use it.** Best place is just after require/include.
+
+To set Transport call:
+```ES6
+collab.setTransport( someTransport );
+```
+
+Read sections below for info about `someTransport`.
+
+You may use more than 1 Transport. This should not change anything in your code, except for a setTransport call.
+
+### child_process fork-based Transport
+
+This is basic Transport. It was the only transport in collab-ms 0.X. If you are migrating from older version - you might want to use it.
+
+It uses child_process built-in in Node and forks process to create Workers.
+
+Usage:
+```ES6
+collab.setTransport( collab.useTransportCpFork() );
+```
+
+`opts` argument in newWorker and newBalancedWorker is then ForkOptions passed to child_process.fork.
+
+### pm2 Transport
+
+This is Transport that works well with pm2. It uses pm2 API to create Workers. Each process will be managed by pm2.
+
+Usage:
+```ES6
+collab.setTransport( collab.useTransportPm2( require('pm2') ) );
+```
+
+Remember to pass `pm2` as argument of useTransportPm2. Like in the example above.
+
+`opts` argument in newWorker and newBalancedWorker is then options object passed to pm2.start.
+
+#### Important notes about pm2 Transport
+
+*   Name of Workers should be unique in the whole application.
+*   Process spawning in pm2 is sometimes extremely slow (pm2 is not spawning processes immediately). If you wish to send command just after creation you may want to wait for whole structure to be created and implement some kind of callback with each Workers' status.
+*   You can also use PMX, pm2 API, Keymetrics - all will work just as expected :)
+
 ## Reference / documentation
 This is typing file for collab-ms, it is also used as a reference/documentation. If you use collab-ms with TypeScript you have this docs in your IDE, too.
 ```typescript
 import { ChildProcess } from "child_process";
+import ChildProcessForkTransport from "./transCp";
+import Pm2Transport from "./transPm2";
 declare module Collab {
     interface NormalSendFunction {
         /**
@@ -684,11 +801,31 @@ declare module Collab {
         resolve?: ResolveFunction;
         reject?: RejectFunction;
     }
+    interface TransportNewWorkerFunc {
+        (name: string, type: string, moduleOrFile: string, options: any, data: any, opts: any, _objectifyDataFunc: any, onMsgFunc: any, _buildFuncSendWithPromiseFunc: any): Promise<WorkerInfo>;
+    }
+    interface TransportOneStrReturnFunc {
+        (): string;
+    }
+    interface TransportSendDataFunc {
+        (proc: any, data: any, _objectifyDataFunc: any): void;
+    }
+    interface TransportOnMgrMsgFunc {
+        (dataClb: any): void;
+    }
+    interface Transport {
+        newWorker: TransportNewWorkerFunc;
+        getMyRole: TransportOneStrReturnFunc;
+        sendData: TransportSendDataFunc;
+        defaultModuleOrFile: TransportOneStrReturnFunc;
+        sendDataToManager: TransportSendDataFunc;
+        registerOnMgrMsg: TransportOnMgrMsgFunc;
+    }
     class PromiseCommunicationBase {
         protected promiseIdx: number;
         protected promises: Promises[];
         constructor();
-        protected _buildFuncSendWithPromise(process: ChildProcess | NodeJS.Process): NormalSendFunction;
+        protected _buildFuncSendWithPromise: (sendFunc: any) => NormalSendFunction;
         protected _makeResolveFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (data?: any, sendWorkDone?: boolean) => void;
         protected _makeRejectFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (err?: any, sendWorkDone?: boolean) => void;
         protected filterMsgIfPromised(data: any, promisedMsgClb: ManagerPromisedMsgClbFunction, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): boolean;
@@ -709,9 +846,9 @@ declare module Collab {
          * @param moduleOrFile Module or file to run (to be used as first parameter in child_process.fork()).
          * @param options Options to pass to the Worker - may be anything.
          * @param data Data about this Worker to store in this Manager. May by anything.
-         * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
+         * @param opts Any options passed to transport.
          */
-        newWorker(type: string, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        newWorker(type: string, moduleOrFile?: string, options?: any, data?: any, opts?: any): Promise<WorkerInfo>;
         /**
          * Find WorkerInfo by Worker name.
          * @param name Name of Worker.
@@ -741,7 +878,7 @@ declare module Collab {
          * @param data Data about this Worker to store in this Manager. May by anything.
          * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
          */
-        newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): Promise<WorkerInfo>;
         /**
          * Adds job to do by some of the best-suited Worker. Best-suited Worker is the one with the smallest amount of current jobs and with free space for next one. If no Worker can be found the job is queued and when any of the Workers will be free this job will be executed.
          * @param data Any data you want to pass to the Worker.
@@ -783,26 +920,29 @@ declare module Collab {
          * Reads name of Worker passed by Manager to this Worker while forking it.
          */
         getName(): string;
-        private onMessage(data);
+        private onMessage;
         /**
          * Sends normal, non-Promised message to closest Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        send(data?: any): void;
+        send: (data?: any) => void;
         /**
          * Sends work-done, non-Promised message to closest Manager. This is usually answer for Balancer Manager.
          * @param data Any data you want to pass to the Manager.
          */
-        sendWorkDone(data?: any): void;
+        sendWorkDone: (data?: any) => void;
     }
-    /**
-     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
-     */
-    function getMyRole(): string;
     /**
      * Returns true if this is main process.
      */
     function isCEO(): boolean;
+    /**
+     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
+     */
+    function getMyRole(): string;
+    const useTransportCpFork: () => ChildProcessForkTransport;
+    const useTransportPm2: (pm2: any) => Pm2Transport;
+    function setTransport(transp: Transport): void;
 }
 export = Collab;
 ```
@@ -812,7 +952,9 @@ Here you may find some pure examples of usage of collab-ms. Examples are ready-t
 
 ### Basic usage example
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
@@ -829,7 +971,9 @@ switch(collab.getMyRole()) {
 
 ### Few Workers at the same level
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
@@ -837,9 +981,10 @@ switch(collab.getMyRole()) {
             console.log('Msg', msg, 'from worker', worker.name);
         });
         for (let i = 0; i < 3; i++) {
-            const name = ceo.newWorker('worker').name;
-
-            console.log('New worker is named', name);
+            ceo.newWorker('worker').then( worker => {
+                const name = worker.name;
+                console.log('New worker is named', name);
+            });
         }
         break;
 
@@ -852,13 +997,17 @@ switch(collab.getMyRole()) {
 
 ### Basic usage with Promises
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
-        (new collab.Manager()).newWorker('worker').sendWithPromise('Hi!').then(ans => {
-            console.log('Answer from worker:', ans);
-        })
+        (new collab.Manager()).newWorker('worker').then( worker => {
+            worker.sendWithPromise('Hi!').then(ans => {
+                console.log('Answer from worker:', ans);
+            });
+        });
         break;
 
     case 'worker': //Worker
@@ -872,20 +1021,23 @@ switch(collab.getMyRole()) {
 
 ### Basic Promises with error handling (reject)
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
         const ceo = new collab.Manager();
 
-        const mathWorker = ceo.newWorker('mathWorker');
-        mathWorker.sendWithPromise({
-            a: 2,
-            b: 3
-        }).then(ans => {
-            console.log('Answer from worker', ans);
-        }).catch(err => {
-            console.log('Error in worker', err);
+        ceo.newWorker('mathWorker').then( mathWorker => {
+            mathWorker.sendWithPromise({
+                a: 2,
+                b: 3
+            }).then(ans => {
+                console.log('Answer from worker', ans);
+            }).catch(err => {
+                console.log('Error in worker', err);
+            });
         });
         break;
 
@@ -898,14 +1050,18 @@ switch(collab.getMyRole()) {
 ```
 
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
-        (new collab.Manager()).newWorker('worker').sendWithPromise('Can you work?').then(ans => {
-            console.log('Answer from worker:', ans);
-        }).catch(err => {
-            console.log('Error in worker:', err);
+        (new collab.Manager()).newWorker('worker').then( worker => {
+            worker.sendWithPromise('Can you work?').then(ans => {
+                console.log('Answer from worker:', ans);
+            }).catch(err => {
+                console.log('Error in worker:', err);
+            });
         });
         break;
 
@@ -922,7 +1078,9 @@ switch(collab.getMyRole()) {
 ### Mix of "async" random input and expected result of Promise call
 Both non-Promised and Promissed messages.
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
@@ -931,16 +1089,16 @@ switch(collab.getMyRole()) {
             console.log('Random input: ping from ' + worker.name);
         });
 
-        const mathWorker = ceo.newWorker('mathWorker');
-
-        //And still we can send Promised call - when we expect answer
-        mathWorker.sendWithPromise({
-            a: 2,
-            b: 3
-        }).then(ans => {
-            console.log('Answer from worker', ans);
-        }).catch(err => {
-            console.log('Error from worker', err);
+        ceo.newWorker('mathWorker').then( mathWorker => {
+            //And still we can send Promised call - when we expect answer
+            mathWorker.sendWithPromise({
+                a: 2,
+                b: 3
+            }).then(ans => {
+                console.log('Answer from worker', ans);
+            }).catch(err => {
+                console.log('Error from worker', err);
+            });
         });
         break;
 
@@ -962,32 +1120,36 @@ The idea here is to sum all of the numbers in array multipied by 2. We also crea
 ![Diagram two way CEO - Balancer - Worker, Worker, Worker](docs/images/diagram-balancer-2-way.png "Diagram two way CEO - Balancer - Worker, Worker, Worker")
 
 ```es6
-const collab = require('./collab.js');
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
 
 switch(collab.getMyRole()) {
     case '': //Main/CEO
-        (() => {
-            const ceo = new collab.Manager();
-            const balancer = ceo.newWorker('balancer');
-            balancer.sendWithPromise({
-                data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-            }).then(ans => {
-                console.log('Answer from balancer', ans);
-            }).catch(err => {
-                console.log('Error from balancer', err);
-            });
-        })();
+        const ceo = new collab.Manager();
+        ceo.newWorker('balancer').then( balancer => {
+            setTimeout(() => {
+                balancer.sendWithPromise({
+                    data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                }).then(ans => {
+                    console.log('Answer from balancer', ans);
+                }).catch(err => {
+                    console.log('Error from balancer', err);
+                });
+            }, 10000); //Note this is here as fast patch for slow pm2 process spawning
+        });
         break;
 
     case 'balancer': //Banalcer/queue
-        (() => {
-            const balancer = new collab.Balancer();
-            for (let i = 0; i < 3; i++) {
-                balancer.newBalancedWorker('mathWorker', 2);
-            }
-
+        const balancer = new collab.Balancer();
+        let promises = [];
+        for (let i = 0; i < 3; i++) {
+            promises.push(balancer.newBalancedWorker('mathWorker', 2));
+        }
+        Promise.all(promises).then(() => {
             //Im also Worker
             const worker = new collab.Worker(null, (data, resolve, reject) => {
+                console.log('Balancer got a job!', data);
                 let promises = [];
                 data.data.forEach(number => {
                     promises.push(balancer.addJobWithPromise({
@@ -1000,11 +1162,11 @@ switch(collab.getMyRole()) {
                     resolve(sum);
                 }).catch(reject);
             });
-        })();
+        });
         break;
 
     case 'mathWorker': //Worker
-        const worker = new collab.Worker(null, (data, resolve, reject) => {
+        new collab.Worker(null, (data, resolve, reject) => {
             setTimeout(() => {
                 resolve({
                     result : data.number * 2
@@ -1017,10 +1179,15 @@ switch(collab.getMyRole()) {
  
  ### Big tree structure - a lot of levels
  This is usually not good idea, but it works.
- ```es6
- const collab = require('./collab.js');
+ Please note that Worker names should be **unique** across the app!
 
-const structureDepth = 20;
+ This example is slow on pm2 Transport (take a look at pm2 Transport notes).
+ ```es6
+const collab = require('collab-ms');
+
+collab.setTransport( collab.useTransportCpFork() );
+
+const structureDepth = 10;
 switch(collab.getMyRole()) {
     case '': //Main/CEO
         (() => {
@@ -1028,29 +1195,30 @@ switch(collab.getMyRole()) {
                 console.log('Input message from', worker.name, 'data is', data);
             });
 
-            ceo.newWorker('nextLvlWorker', 'index', 1);
+            ceo.newWorker('nextLvlWorker', 'index.js', 1);
         })();
         break;
 
-    case 'nextLvlWorker':
+    default:
         (() => {
             //Im also worker
             const meWorker = new collab.Worker();
+            const myLvl = parseInt(meWorker.getOptions());
             const meManager = new collab.Manager((worker, data) => {
-                console.log('Passing message from level', meWorker.getOptions()+1, 'to level', meWorker.getOptions());
-                data.levels.push(meWorker.getOptions());
+                console.log('Passing message from level', myLvl+1, 'to level', myLvl);
+                data.levels.push(myLvl);
                 meWorker.send(data);
             });
 
-            console.log('Created nextLvlWorker level', meWorker.getOptions());
+            console.log('Created nextLvlWorker level', myLvl);
 
-            if (meWorker.getOptions() == structureDepth){
+            if (myLvl == structureDepth){
                 meWorker.send({
                     levels:[structureDepth],
                     info:'OK!',
                 });
             } else {
-                meManager.newWorker('nextLvlWorker', 'index', meWorker.getOptions()+1);
+                meManager.newWorker('nextLvlWorkerlvl' + (myLvl+1), 'index.js', myLvl+1);
             }
         })();
         break;
@@ -1061,6 +1229,7 @@ switch(collab.getMyRole()) {
 There are a lot of things to do or to add maybe later. The most important is to write **tests** right now to make it really high-qualiy. 
 
 ## Changelog
+ * 1.0.0 pm2 support! Added Transports and some breaking changes :( Updated and improved docs a little bit.
  * 0.2.4 Fix of Promised messages (this for resolve/reject fixed).
  * 0.2.3 Fix of Promised messages in Balancer.
  * 0.2.2 Added possibility to chain Promised messages. Updated reference/docs.

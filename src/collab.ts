@@ -1,7 +1,11 @@
 import {ChildProcess} from "child_process";
 import cp = require('child_process');
+import ChildProcessForkTransport from "./transCp";
+import Pm2Transport from "./transPm2";
 
 module Collab {
+    let transport : Transport = null;
+
     function _isObject(value : any) {
         return Object.prototype.toString.call(value) == '[object Object]';
     }
@@ -137,6 +141,31 @@ module Collab {
         reject?     :   RejectFunction;
     }
 
+    export interface TransportNewWorkerFunc {
+        (name : string, type: string, moduleOrFile:string, options: any, data: any, opts: any, _objectifyDataFunc : any, onMsgFunc : any, _buildFuncSendWithPromiseFunc : any) : Promise<WorkerInfo>;
+    }
+
+    export interface TransportOneStrReturnFunc {
+        () : string;
+    }
+
+    export interface TransportSendDataFunc {
+        (proc, data:any, _objectifyDataFunc : any) : void;
+    }
+
+    export interface TransportOnMgrMsgFunc {
+        ( dataClb ) : void;
+    }
+
+    export interface Transport {
+        newWorker : TransportNewWorkerFunc;
+        getMyRole : TransportOneStrReturnFunc,
+        sendData : TransportSendDataFunc;
+        defaultModuleOrFile : TransportOneStrReturnFunc;
+        sendDataToManager : TransportSendDataFunc;
+        registerOnMgrMsg : TransportOnMgrMsgFunc;
+    }
+
     export class PromiseCommunicationBase {
         protected promiseIdx: number;
         protected promises: Promises[];
@@ -146,7 +175,7 @@ module Collab {
             this.promises = [];
         }
 
-        protected _buildFuncSendWithPromise(process: ChildProcess | NodeJS.Process) : NormalSendFunction {
+        protected _buildFuncSendWithPromise = (sendFunc : any) : NormalSendFunction => {
             return (data): Promise<any> => {
                 let promises: Promises;
                 const promiseId = this.promiseIdx++;
@@ -166,7 +195,7 @@ module Collab {
                     'promiseId$': promiseId
                 }, _objectifyData(data));
 
-                process.send(dataWithPromise);
+                sendFunc(dataWithPromise);
 
                 return promise;
             };
@@ -268,36 +297,22 @@ module Collab {
          * @param moduleOrFile Module or file to run (to be used as first parameter in child_process.fork()).
          * @param options Options to pass to the Worker - may be anything.
          * @param data Data about this Worker to store in this Manager. May by anything.
-         * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
+         * @param opts Any options passed to transport.
          */
-        public newWorker(type: string, moduleOrFile:string = 'index', options: any = null, data: any = null, forkOpts: any = null): WorkerInfo {
-            if (/[^a-z]/i.test(type))
-                throw "Worker type must be one word, only letters!";
+        public async newWorker(type: string, moduleOrFile:string = transport.defaultModuleOrFile(), options: any = null, data: any = null, opts: any = null): Promise<WorkerInfo> {
+            if (/[^a-z0-9]/i.test(type))
+                throw "Worker type must be one word, only letters and digits!";
 
             const idx = this.workers.filter(worker => worker.type == type).length + 1;
             const name = `${type.toUpperCase()} #${idx}`;
-            const process = cp.fork(moduleOrFile, [
-                type,
-                JSON.stringify(name),
-                JSON.stringify(options)
-            ], forkOpts);
-            const workerInfo = {
-                name,
-                type,
-                options,
-                process,
-                data,
-                send: function(data:any) {
-                    process.send(_objectifyData(data));
-                },
-                sendWithPromise: this._buildFuncSendWithPromise(process)
-            };
 
-            process.on('message', (data) => {
+            this.workers.push({name, type}); //Just insert name and type for counting
+
+            const workerInfo = await getTransport().newWorker(name, type, moduleOrFile, options, data, opts, _objectifyData, (name, data) => {
                 this.onMessage(this.getWorker(name), data);
-            });
+            }, this._buildFuncSendWithPromise);
 
-            this.workers.push(workerInfo);
+            this.workers = this.workers.map( worker => worker.name === workerInfo.name ? workerInfo : worker ); //Replace with current data
 
             return workerInfo;
         }
@@ -328,7 +343,7 @@ module Collab {
          * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
          */
         public constructor(onWorkerMessage?: WorkerMsgClbFunction) {
-            super(onWorkerMessage);
+            super(onWorkerMessage, null);
 
             this.queue = [];
             // this.queueCheckInterval = setInterval(() => this.onQueueCheckInterval(), 1000);
@@ -381,8 +396,8 @@ module Collab {
          * @param data Data about this Worker to store in this Manager. May by anything.
          * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
          */
-        public newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile:string = 'index', options: any = null, data: any = null, forkOpts: any = null): WorkerInfo {
-            return super.newWorker(type, moduleOrFile, options, Object.assign({}, {
+        public async newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile:string = transport.defaultModuleOrFile(), options: any = null, data: any = null, forkOpts: any = null): Promise<WorkerInfo> {
+            return await super.newWorker(type, moduleOrFile, options, Object.assign({}, {
                 maxJobsAtOnce$:maxJobsAtOnce,
                 jobsCount$: 0,
             }, _objectifyData(data)), forkOpts);
@@ -454,11 +469,11 @@ module Collab {
         public constructor(public onManagerMessage?: ManagerMsgClbFunction, public onManagerMessageWithPromise?: ManagerPromisedMsgClbFunction) {
             super();
 
-            this.sendWithPromise = this._buildFuncSendWithPromise(process);
-
-            process.on('message', (data) => {
-                this.onMessage(data);
+            this.sendWithPromise = this._buildFuncSendWithPromise(function(data:any) {
+                getTransport().sendData(process, data, _objectifyData);
             });
+
+            transport.registerOnMgrMsg(this.onMessage);
             this.type = process.argv[2];
             this.name = JSON.parse(process.argv[3]);
             this.options = JSON.parse(process.argv[4]);
@@ -484,7 +499,7 @@ module Collab {
             return this.name;
         }
 
-        private onMessage(data: any) {
+        private onMessage = (data: any) => {
             if (!this.filterMsgIfPromised(data, this.onManagerMessageWithPromise, this.send, this.sendWorkDone)) {
                 if (this.onManagerMessage)
                     this.onManagerMessage(_prepClearData(data), this.send, this.sendWorkDone);
@@ -496,7 +511,7 @@ module Collab {
          * @param data Any data you want to pass to the Manager.
          */
         public send = (data: any = null) => {
-            process.send(_objectifyData(data));
+            transport.sendDataToManager(process, data, _objectifyData);
         }
 
         /**
@@ -513,17 +528,32 @@ module Collab {
     }
 
     /**
-     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
-     */
-    export function getMyRole() {
-        return process.argv[2] ? process.argv[2] : '';
-    }
-
-    /**
      * Returns true if this is main process.
      */
     export function isCEO() {
         return getMyRole() == '';
+    }
+
+    /**
+     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
+     */
+    export function getMyRole() {
+        return getTransport().getMyRole();
+    }
+
+    export const useTransportCpFork = () => new ChildProcessForkTransport();
+
+    export const useTransportPm2 = ( pm2 : any ) => new Pm2Transport( pm2 );
+
+    export function setTransport( transp : Transport ){
+        transport = transp;
+    }
+
+    function getTransport(){
+        if (!transport){
+            throw new Error('No transport selected! Please use Collab.setTransport() with valid Transport. If you have updated collab-ms, just check out the docs - upgrade is very simple.');
+        }
+        return transport;
     }
 }
 

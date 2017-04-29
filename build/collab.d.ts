@@ -1,4 +1,6 @@
 import { ChildProcess } from "child_process";
+import ChildProcessForkTransport from "./transCp";
+import Pm2Transport from "./transPm2";
 declare module Collab {
     interface NormalSendFunction {
         /**
@@ -94,11 +96,31 @@ declare module Collab {
         resolve?: ResolveFunction;
         reject?: RejectFunction;
     }
+    interface TransportNewWorkerFunc {
+        (name: string, type: string, moduleOrFile: string, options: any, data: any, opts: any, _objectifyDataFunc: any, onMsgFunc: any, _buildFuncSendWithPromiseFunc: any): Promise<WorkerInfo>;
+    }
+    interface TransportOneStrReturnFunc {
+        (): string;
+    }
+    interface TransportSendDataFunc {
+        (proc: any, data: any, _objectifyDataFunc: any): void;
+    }
+    interface TransportOnMgrMsgFunc {
+        (dataClb: any): void;
+    }
+    interface Transport {
+        newWorker: TransportNewWorkerFunc;
+        getMyRole: TransportOneStrReturnFunc;
+        sendData: TransportSendDataFunc;
+        defaultModuleOrFile: TransportOneStrReturnFunc;
+        sendDataToManager: TransportSendDataFunc;
+        registerOnMgrMsg: TransportOnMgrMsgFunc;
+    }
     class PromiseCommunicationBase {
         protected promiseIdx: number;
         protected promises: Promises[];
         constructor();
-        protected _buildFuncSendWithPromise(process: ChildProcess | NodeJS.Process): NormalSendFunction;
+        protected _buildFuncSendWithPromise: (sendFunc: any) => NormalSendFunction;
         protected _makeResolveFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (data?: any, sendWorkDone?: boolean) => void;
         protected _makeRejectFunc(promiseId: number, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): (err?: any, sendWorkDone?: boolean) => void;
         protected filterMsgIfPromised(data: any, promisedMsgClb: ManagerPromisedMsgClbFunction, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): boolean;
@@ -119,9 +141,9 @@ declare module Collab {
          * @param moduleOrFile Module or file to run (to be used as first parameter in child_process.fork()).
          * @param options Options to pass to the Worker - may be anything.
          * @param data Data about this Worker to store in this Manager. May by anything.
-         * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
+         * @param opts Any options passed to transport.
          */
-        newWorker(type: string, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        newWorker(type: string, moduleOrFile?: string, options?: any, data?: any, opts?: any): Promise<WorkerInfo>;
         /**
          * Find WorkerInfo by Worker name.
          * @param name Name of Worker.
@@ -151,7 +173,7 @@ declare module Collab {
          * @param data Data about this Worker to store in this Manager. May by anything.
          * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
          */
-        newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): WorkerInfo;
+        newBalancedWorker(type: string, maxJobsAtOnce: number, moduleOrFile?: string, options?: any, data?: any, forkOpts?: any): Promise<WorkerInfo>;
         /**
          * Adds job to do by some of the best-suited Worker. Best-suited Worker is the one with the smallest amount of current jobs and with free space for next one. If no Worker can be found the job is queued and when any of the Workers will be free this job will be executed.
          * @param data Any data you want to pass to the Worker.
@@ -193,7 +215,7 @@ declare module Collab {
          * Reads name of Worker passed by Manager to this Worker while forking it.
          */
         getName(): string;
-        private onMessage(data);
+        private onMessage;
         /**
          * Sends normal, non-Promised message to closest Manager.
          * @param data Any data you want to pass to the Manager.
@@ -206,12 +228,15 @@ declare module Collab {
         sendWorkDone: (data?: any) => void;
     }
     /**
-     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
-     */
-    function getMyRole(): string;
-    /**
      * Returns true if this is main process.
      */
     function isCEO(): boolean;
+    /**
+     * Reads type name of Worker passed by Manager to this Worker while forking it or empty string for main CEO process.
+     */
+    function getMyRole(): string;
+    const useTransportCpFork: () => ChildProcessForkTransport;
+    const useTransportPm2: (pm2: any) => Pm2Transport;
+    function setTransport(transp: Transport): void;
 }
 export = Collab;
