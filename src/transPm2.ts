@@ -1,5 +1,3 @@
-import {ChildProcess} from "child_process";
-import cp = require('child_process');
 import Collab = require("./collab");
 
 export default class Pm2Transport implements Collab.Transport {
@@ -58,15 +56,6 @@ export default class Pm2Transport implements Collab.Transport {
                     } );
                 }
             });
-
-            // console.log('process', process);
-
-            // cp.fork(moduleOrFile, [
-            //     type,
-            //     JSON.stringify(name),
-            //     JSON.stringify(options)
-            // ], opts)
-
         });
     }
 
