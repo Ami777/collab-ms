@@ -306,7 +306,7 @@ var Collab;
                 this.send(dataWorkDone);
             };
             this.sendWithPromise = this._buildFuncSendWithPromise(function (data) {
-                getTransport().sendData(process, data, _objectifyData);
+                getTransport().sendDataToManager(process, data, _objectifyData);
             });
             transport.registerOnMgrMsg(this.onMessage);
             this.type = process.argv[2];

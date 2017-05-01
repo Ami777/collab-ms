@@ -64,12 +64,6 @@ class Pm2Transport {
                         });
                     }
                 });
-                // console.log('process', process);
-                // cp.fork(moduleOrFile, [
-                //     type,
-                //     JSON.stringify(name),
-                //     JSON.stringify(options)
-                // ], opts)
             });
         });
     }
@@ -77,11 +71,27 @@ class Pm2Transport {
         return process.argv[2] ? process.argv[2] : '';
     }
     sendData(proc, data, _objectifyDataFunc) {
-        this.pm2.sendDataToProcessId(proc[0].pm2_env.pm_id, {
+        let pmId;
+        if (proc[0] && proc[0].pm2_env && proc[0].pm2_env.pm_id) {
+            pmId = proc[0].pm2_env.pm_id;
+        }
+        else if (proc.pm2_env && proc.pm2_env.pm_id) {
+            pmId = proc.pm2_env.pm_id;
+        }
+        else if (proc[0] && proc[0].env && proc[0].env.pm_id) {
+            pmId = proc[0].env.pm_id;
+        }
+        else if (proc.env && proc.env.pm_id) {
+            pmId = proc.env.pm_id;
+        }
+        else {
+            throw new Error('Cannot find pm_id!');
+        }
+        this.pm2.sendDataToProcessId(pmId, {
             type: 'collab-ms:pm2trans:msg',
             topic: 'collab-ms:pm2trans:msg',
             data: _objectifyDataFunc(data),
-            id: proc[0].pm2_env.pm_id,
+            id: pmId,
         }, (err, res) => { });
     }
     sendDataToManager(proc, data, _objectifyDataFunc) {
