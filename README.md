@@ -8,7 +8,7 @@ npm install collab-ms
 ```
 
 GitHub:
-https://github.com/Ami777/collab-m
+https://github.com/Ami777/collab-ms
 
 npm:
 https://www.npmjs.com/package/collab-ms
@@ -1229,6 +1229,7 @@ switch(collab.getMyRole()) {
 There are a lot of things to do or to add maybe later. The most important is to write **tests** right now to make it really high-qualiy. 
 
 ## Changelog
+ * 1.0.1 Fix of prod pm2 environment under Linux. Fixed sending Promised messages up to Manager.
  * 1.0.0 pm2 support! Added Transports and some breaking changes :( Updated and improved docs a little bit.
  * 0.2.4 Fix of Promised messages (this for resolve/reject fixed).
  * 0.2.3 Fix of Promised messages in Balancer.

@@ -470,7 +470,7 @@ module Collab {
             super();
 
             this.sendWithPromise = this._buildFuncSendWithPromise(function(data:any) {
-                getTransport().sendData(process, data, _objectifyData);
+                getTransport().sendDataToManager(process, data, _objectifyData);
             });
 
             transport.registerOnMgrMsg(this.onMessage);
