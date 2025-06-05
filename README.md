@@ -36,6 +36,7 @@ The name in shortcut for "collaboration". In this library we think about micro-s
 *   Combine normal messages, Promised messages and auto balancing how you need to
 *   Spawn new forks of process, communicate via built-in ICS (well, you don't need to go into details, this is transparent for you)
 *   pm2 compatible (since 1.0.0) - spawn new processes and communicate using pm2 API and monitor them (transparent for you). PMX also works.
+*   Worker Threads support - spawn lightweight workers using Node's worker_threads module.
 
 ## Basic concepts
 
@@ -681,6 +682,17 @@ collab.setTransport( collab.useTransportCpFork() );
 
 `opts` argument in newWorker and newBalancedWorker is then ForkOptions passed to child_process.fork.
 
+### worker_threads Transport
+
+This transport uses Node's built-in `worker_threads` module to spawn lightweight workers.
+
+Usage:
+```ES6
+collab.setTransport( collab.useTransportWorkerThreads() );
+```
+
+`opts` argument in newWorker and newBalancedWorker is then options object passed to the `Worker` constructor.
+
 ### pm2 Transport
 
 This is Transport that works well with pm2. It uses pm2 API to create Workers. Each process will be managed by pm2.
@@ -706,6 +718,7 @@ This is typing file for collab-ms, it is also used as a reference/documentation.
 import { ChildProcess } from "child_process";
 import ChildProcessForkTransport from "./transCp";
 import Pm2Transport from "./transPm2";
+import WorkerThreadsTransport from "./transWorker";
 declare module Collab {
     interface NormalSendFunction {
         /**
@@ -942,6 +955,7 @@ declare module Collab {
     function getMyRole(): string;
     const useTransportCpFork: () => ChildProcessForkTransport;
     const useTransportPm2: (pm2: any) => Pm2Transport;
+    const useTransportWorkerThreads: () => WorkerThreadsTransport;
     function setTransport(transp: Transport): void;
 }
 export = Collab;

@@ -2,6 +2,7 @@ import {ChildProcess} from "child_process";
 import cp = require('child_process');
 import ChildProcessForkTransport from "./transCp";
 import Pm2Transport from "./transPm2";
+import WorkerThreadsTransport from "./transWorker";
 
 module Collab {
     let transport : Transport = null;
@@ -544,6 +545,8 @@ module Collab {
     export const useTransportCpFork = () => new ChildProcessForkTransport();
 
     export const useTransportPm2 = ( pm2 : any ) => new Pm2Transport( pm2 );
+
+    export const useTransportWorkerThreads = () => new WorkerThreadsTransport();
 
     export function setTransport( transp : Transport ){
         transport = transp;

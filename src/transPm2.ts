@@ -92,9 +92,9 @@ export default class Pm2Transport implements Collab.Transport {
     }
     
     registerOnMgrMsg( dataClb ){
-        process.on('message', (data) => {
-            if (data && data.type && data.type === 'collab-ms:pm2trans:msg') {
-                dataClb(data.data);
+        process.on('message', (data: any) => {
+            if (data && (data as any).type && (data as any).type === 'collab-ms:pm2trans:msg') {
+                dataClb((data as any).data);
             }
         });
     }
