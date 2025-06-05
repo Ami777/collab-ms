@@ -1,7 +1,8 @@
 import { ChildProcess } from "child_process";
 import ChildProcessForkTransport from "./transCp";
 import Pm2Transport from "./transPm2";
-declare module Collab {
+import WorkerThreadsTransport from "./transWorker";
+declare namespace Collab {
     interface NormalSendFunction {
         /**
          * @param data Any data you want to pass.
@@ -126,8 +127,8 @@ declare module Collab {
         protected filterMsgIfPromised(data: any, promisedMsgClb: ManagerPromisedMsgClbFunction, sendFunc: NormalSendFunction, sendWorkDoneFunc?: NormalSendFunction): boolean;
     }
     class Manager extends PromiseCommunicationBase {
-        protected onWorkerMessage: WorkerMsgClbFunction;
-        protected onWorkerPromisedMessage: ManagerPromisedMsgClbFunction;
+        protected onWorkerMessage?: WorkerMsgClbFunction;
+        protected onWorkerPromisedMessage?: ManagerPromisedMsgClbFunction;
         protected workers: WorkerInfo[];
         /**
          * Class constructor for Manager - CEO and mid-level managers.
@@ -162,8 +163,8 @@ declare module Collab {
          * @param onWorkerMessage Callback which will run when non-Promised message arrives to Manager from Worker.
          */
         constructor(onWorkerMessage?: WorkerMsgClbFunction);
-        private onQueueCheckInterval();
-        private findMostFreeWorker();
+        private onQueueCheckInterval;
+        private findMostFreeWorker;
         /**
          * Adds new Worker using child_process.fork() and links it with this Manager. This is special type of Worker which will be managed and balanced by this Balancer. For more information refer to Manager.newWorker() docs.
          * @param type String with name of type of Worker (for example 'worker' or 'readNode'). MUST BE ONE WORD, ONLY LETTERS.
@@ -187,8 +188,8 @@ declare module Collab {
         protected onMessage(worker: WorkerInfo, data: any): void;
     }
     class Worker extends PromiseCommunicationBase {
-        onManagerMessage: ManagerMsgClbFunction;
-        onManagerMessageWithPromise: ManagerPromisedMsgClbFunction;
+        onManagerMessage?: ManagerMsgClbFunction;
+        onManagerMessageWithPromise?: ManagerPromisedMsgClbFunction;
         private type;
         private name;
         private options;
@@ -237,6 +238,7 @@ declare module Collab {
     function getMyRole(): string;
     const useTransportCpFork: () => ChildProcessForkTransport;
     const useTransportPm2: (pm2: any) => Pm2Transport;
+    const useTransportWorkerThreads: () => WorkerThreadsTransport;
     function setTransport(transp: Transport): void;
 }
 export = Collab;

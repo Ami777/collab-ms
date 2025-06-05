@@ -1,14 +1,16 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments)).next());
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
 const transCp_1 = require("./transCp");
 const transPm2_1 = require("./transPm2");
+const transWorker_1 = require("./transWorker");
 var Collab;
 (function (Collab) {
     let transport = null;
@@ -45,8 +47,8 @@ var Collab;
                     const promise = new Promise((resolve, reject) => {
                         promises = {
                             id: promiseId,
-                            resolve: resolve,
-                            reject: reject,
+                            resolve,
+                            reject,
                         };
                     });
                     this.promises.push(promises);
@@ -144,13 +146,13 @@ var Collab;
          * @param data Data about this Worker to store in this Manager. May by anything.
          * @param opts Any options passed to transport.
          */
-        newWorker(type, moduleOrFile = transport.defaultModuleOrFile(), options = null, data = null, opts = null) {
-            return __awaiter(this, void 0, Promise, function* () {
+        newWorker(type_1) {
+            return __awaiter(this, arguments, void 0, function* (type, moduleOrFile = transport.defaultModuleOrFile(), options = null, data = null, opts = null) {
                 if (/[^a-z0-9]/i.test(type))
                     throw "Worker type must be one word, only letters and digits!";
                 const idx = this.workers.filter(worker => worker.type == type).length + 1;
                 const name = `${type.toUpperCase()} #${idx}`;
-                this.workers.push({ name: name, type: type }); //Just insert name and type for counting
+                this.workers.push({ name, type }); //Just insert name and type for counting
                 const workerInfo = yield getTransport().newWorker(name, type, moduleOrFile, options, data, opts, _objectifyData, (name, data) => {
                     this.onMessage(this.getWorker(name), data);
                 }, this._buildFuncSendWithPromise);
@@ -224,10 +226,12 @@ var Collab;
          * @param data Data about this Worker to store in this Manager. May by anything.
          * @param forkOpts Any fork options (options : ForkOptions) you may use with child_process.fork().
          */
-        newBalancedWorker(type, maxJobsAtOnce, moduleOrFile = transport.defaultModuleOrFile(), options = null, data = null, forkOpts = null) {
-            const _super = name => super[name];
-            return __awaiter(this, void 0, Promise, function* () {
-                return yield _super("newWorker").call(this, type, moduleOrFile, options, Object.assign({}, {
+        newBalancedWorker(type_1, maxJobsAtOnce_1) {
+            const _super = Object.create(null, {
+                newWorker: { get: () => super.newWorker }
+            });
+            return __awaiter(this, arguments, void 0, function* (type, maxJobsAtOnce, moduleOrFile = transport.defaultModuleOrFile(), options = null, data = null, forkOpts = null) {
+                return yield _super.newWorker.call(this, type, moduleOrFile, options, Object.assign({}, {
                     maxJobsAtOnce$: maxJobsAtOnce,
                     jobsCount$: 0,
                 }, _objectifyData(data)), forkOpts);
@@ -251,8 +255,8 @@ var Collab;
             const promise = new Promise((resolve, reject) => {
                 promises = {
                     id: promiseId,
-                    resolve: resolve,
-                    reject: reject,
+                    resolve,
+                    reject,
                 };
             });
             this.promises.push(promises);
@@ -349,6 +353,7 @@ var Collab;
     Collab.getMyRole = getMyRole;
     Collab.useTransportCpFork = () => new transCp_1.default();
     Collab.useTransportPm2 = (pm2) => new transPm2_1.default(pm2);
+    Collab.useTransportWorkerThreads = () => new transWorker_1.default();
     function setTransport(transp) {
         transport = transp;
     }
